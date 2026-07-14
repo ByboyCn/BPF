@@ -1,4 +1,6 @@
 using System;
+using Bpf.Controls.Routing;
+using Bpf.Input;
 using Bpf.Media;
 using Bpf.Platform;
 using Bpf.PropertySystem;
@@ -25,7 +27,7 @@ namespace Bpf.Controls
             get => GetValue(ContentProperty);
             set
             {
-                SetValue(ContentProperty, value);
+                SetValue(ContentProperty, value!);
                 _textBlock.Text = value;
             }
         }
@@ -39,7 +41,7 @@ namespace Bpf.Controls
         public Brush Background
         {
             get => GetValue(BackgroundProperty);
-            set => SetValue(BackgroundProperty, value);
+            set => SetValue(BackgroundProperty, value!);
         }
 
         public static readonly StyledProperty<Brush> ForegroundProperty =
@@ -53,7 +55,7 @@ namespace Bpf.Controls
             get => GetValue(ForegroundProperty);
             set
             {
-                SetValue(ForegroundProperty, value);
+                SetValue(ForegroundProperty, value!);
                 _textBlock.Foreground = value;
             }
         }
@@ -67,7 +69,7 @@ namespace Bpf.Controls
         public Brush BorderBrush
         {
             get => GetValue(BorderBrushProperty);
-            set => SetValue(BorderBrushProperty, value);
+            set => SetValue(BorderBrushProperty, value!);
         }
 
         public static readonly StyledProperty<double> PaddingProperty =
@@ -78,7 +80,7 @@ namespace Bpf.Controls
         public double Padding
         {
             get => GetValue(PaddingProperty);
-            set => SetValue(PaddingProperty, value);
+            set => SetValue(PaddingProperty, value!);
         }
 
         public static readonly StyledProperty<double> FontSizeProperty =
@@ -91,7 +93,7 @@ namespace Bpf.Controls
             get => GetValue(FontSizeProperty);
             set
             {
-                SetValue(FontSizeProperty, value);
+                SetValue(FontSizeProperty, value!);
                 _textBlock.FontSize = value;
             }
         }
@@ -106,18 +108,35 @@ namespace Bpf.Controls
             get => GetValue(FontFamilyProperty);
             set
             {
-                SetValue(FontFamilyProperty, value);
+                SetValue(FontFamilyProperty, value!);
                 _textBlock.FontFamily = value;
             }
         }
 
-        /// <summary>点击事件。</summary>
-        public event EventHandler<RoutedEventArgs>? Click;
+        // ── 路由事件 ──
+
+        /// <summary>
+        /// Click 路由事件(冒泡)。鼠标按下并抬起时、或按钮聚焦时按 Enter/Space 触发。
+        /// </summary>
+        public static readonly RoutedEvent<RoutedEventArgs> ClickEvent =
+            RoutedEvent<RoutedEventArgs>.Register<Button>(
+                nameof(Click), RoutingStrategies.Bubble);
+
+        /// <summary>
+        /// 点击事件。订阅等价于 <c>AddHandler(ClickEvent, handler)</c>。
+        /// </summary>
+        public event EventHandler<RoutedEventArgs>? Click
+        {
+            add => AddHandler(ClickEvent, value!);
+            remove => RemoveHandler(ClickEvent, value!);
+        }
 
         public Button()
         {
             _textBlock = new TextBlock();
             _textBlock.Parent = this;
+            // Button 默认可聚焦(可被 Tab 选中,响应 Enter/Space)
+            IsFocusable = true;
         }
 
         protected override void OnAttachedToHost()
@@ -209,14 +228,19 @@ namespace Bpf.Controls
             {
                 _isPressed = false;
                 InvalidateVisual();
-                Click?.Invoke(this, new RoutedEventArgs());
+                // 通过路由事件派发 Click(冒泡到祖先)
+                RaiseEvent(ClickEvent, new RoutedEventArgs());
             }
         }
-    }
 
-    /// <summary>路由事件参数(M1 简化为非路由)。</summary>
-    public sealed class RoutedEventArgs : EventArgs
-    {
-        public bool Handled { get; set; }
+        /// <summary>键盘:聚焦状态下按 Enter/Space 触发 Click。</summary>
+        protected internal override void OnKeyDown(KeyEventArgs e)
+        {
+            if (IsFocused && (e.Key == Bpf.Input.Key.Enter || e.Key == Bpf.Input.Key.Space))
+            {
+                RaiseEvent(ClickEvent, new RoutedEventArgs());
+                e.Handled = true;
+            }
+        }
     }
 }

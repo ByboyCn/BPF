@@ -1,4 +1,5 @@
 using System;
+using Bpf.Input;
 
 namespace Bpf.Platform
 {
@@ -44,6 +45,13 @@ namespace Bpf.Platform
         event EventHandler<PointerEventArgs>? PointerPressed;
         event EventHandler<PointerEventArgs>? PointerReleased;
         event EventHandler<PointerEventArgs>? PointerMoved;
+
+        /// <summary>键盘按键按下/抬起。</summary>
+        event EventHandler<KeyEventArgs>? KeyDown;
+        event EventHandler<KeyEventArgs>? KeyUp;
+
+        /// <summary>文本输入(WM_CHAR,用于字符输入)。</summary>
+        event EventHandler<TextEventArgs>? TextInput;
 
         /// <summary>窗口关闭请求。</summary>
         event EventHandler? Closed;

@@ -1,18 +1,18 @@
 using System;
+using Bpf.Controls.Routing;
 
 namespace Bpf.Platform
 {
-    /// <summary>鼠标/触摸指针输入事件参数。</summary>
-    public sealed class PointerEventArgs : EventArgs
+    /// <summary>
+    /// 鼠标/触摸指针输入事件参数(可路由)。继承 RoutedEventArgs 以支持冒泡。
+    /// </summary>
+    public sealed class PointerEventArgs : RoutedEventArgs
     {
-        public Point Position { get; }
+        public Point Position { get; internal set; }
         public PointerDeviceType DeviceType { get; }
 
-        /// <summary>按下/松开时,被触发的按键(M1 仅支持左键)。</summary>
+        /// <summary>按下/松开时,被触发的按键。</summary>
         public PointerButton Button { get; }
-
-        /// <summary>是否已被处理(用于将来事件冒泡/隧道)。</summary>
-        public bool Handled { get; set; }
 
         public PointerEventArgs(Point position, PointerDeviceType deviceType, PointerButton button)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Bpf.Input;
 using Bpf.Layout;
 using Bpf.Media;
 using Bpf.Platform;
@@ -72,12 +73,50 @@ namespace Bpf.Controls
             platformWindow.PointerPressed += OnPlatformPointerPressed;
             platformWindow.PointerReleased += OnPlatformPointerReleased;
             platformWindow.PointerMoved += OnPlatformPointerMoved;
+            platformWindow.KeyDown += OnPlatformKeyDown;
+            platformWindow.KeyUp += OnPlatformKeyUp;
+            platformWindow.TextInput += OnPlatformTextInput;
             platformWindow.Closed += OnPlatformClosed;
 
             // 应用标题
             platformWindow.Title = Title;
             platformWindow.Show();
             platformWindow.Invalidate();
+
+            // 初始焦点:聚焦第一个可聚焦控件
+            FocusManager.TabNext(_rootPanel);
+        }
+
+        // ── 键盘派发 ──
+
+        private void OnPlatformKeyDown(object? sender, KeyEventArgs e)
+        {
+            // Tab 键在窗口层处理:切换焦点(Shift+Tab 反向)
+            if (e.Key == Key.Tab)
+            {
+                if ((e.Modifiers & KeyModifiers.Shift) != 0)
+                    FocusManager.TabPrevious(_rootPanel);
+                else
+                    FocusManager.TabNext(_rootPanel);
+                e.Handled = true;
+                return;
+            }
+
+            // 派发给焦点控件(走 Bubble 路由);无焦点时发给根面板
+            var target = FocusManager.Focused ?? (Control)_rootPanel;
+            target.RaiseEvent(Control.KeyDownEvent, e);
+        }
+
+        private void OnPlatformKeyUp(object? sender, KeyEventArgs e)
+        {
+            var target = FocusManager.Focused ?? (Control)_rootPanel;
+            target.RaiseEvent(Control.KeyUpEvent, e);
+        }
+
+        private void OnPlatformTextInput(object? sender, TextEventArgs e)
+        {
+            var target = FocusManager.Focused ?? (Control)_rootPanel;
+            target.RaiseEvent(Control.TextInputEvent, e);
         }
 
         private void OnPlatformResized(object? sender, SizeChangedEventArgs e)
@@ -102,24 +141,68 @@ namespace Bpf.Controls
             DispatchPointer(e, moved: true);
         }
 
-        /// <summary>M1 命中测试:从顶层向下,找到第一个命中的控件并派发事件。</summary>
+        /// <summary>
+        /// 递归命中测试:找到命中的最深叶子控件,转换坐标到其本地空间后派发指针事件。
+        /// 这修掉了 M1 只遍历 rootPanel.Children 一层的 bug。
+        /// </summary>
         private void DispatchPointer(PointerEventArgs e, bool pressed = false, bool moved = false)
         {
-            // 用根面板做命中测试,转发给命中的子控件
-            if (_rootPanel.HitTest(e.Position))
+            var target = FindHitTestTarget(_rootPanel, e.Position);
+            if (target is null) return;
+
+            // 把窗口坐标转换为 target 本地坐标(减去所有祖先的 Bounds 原点)
+            var localPos = ToLocal(target, e.Position);
+            e.Position = localPos;
+
+            if (pressed) target.RaisePointerPressed(e);
+            else if (moved) target.RaisePointerMoved(e);
+            else target.RaisePointerReleased(e);
+        }
+
+        /// <summary>
+        /// 递归找最深命中的控件。point 始终在 control 的父坐标系(对 root 是窗口坐标)。
+        /// 关键:child.Bounds 也在同一父坐标系,直接用 Contains 判断,不要做坐标转换。
+        /// 只有进入子控件内部递归时,才把 point 转换到子控件的父坐标系(即减去 child.Bounds 原点)。
+        /// </summary>
+        private static Control? FindHitTestTarget(Control control, Point point)
+        {
+            if (!control.IsVisible) return null;
+            if (!control.Bounds.Contains(point)) return null;
+
+            // 命中本控件。优先深入子控件找更深的命中者。
+            if (control is IPanel panel)
             {
-                // 简化:遍历 children 找命中的
-                foreach (var child in _rootPanel.Children)
+                // 倒序遍历:后绘制的在上层,优先命中
+                for (int i = panel.Children.Count - 1; i >= 0; i--)
                 {
-                    if (child.HitTest(e.Position))
-                    {
-                        if (pressed) child.RaisePointerPressed(e);
-                        else if (moved) child.RaisePointerMoved(e);
-                        else child.RaisePointerReleased(e);
-                        break;
-                    }
+                    var child = panel.Children[i];
+                    // child.Bounds 在 control 的坐标系里,point 也在,直接判断
+                    if (!child.Bounds.Contains(point)) continue;
+                    // 命中 child:转换到 child 的坐标系(减去 child.Bounds 原点),递归
+                    var childLocal = new Point(point.X - child.Bounds.X, point.Y - child.Bounds.Y);
+                    var hit = FindHitTestTarget(child, childLocal);
+                    if (hit is not null) return hit;
+                    // child 内部未命中更深的,但 child 自身命中 —— 返回 child
+                    return child;
                 }
             }
+
+            // 叶子控件,或容器自身命中区(无子命中)
+            return control;
+        }
+
+        /// <summary>把窗口坐标系下的 point 转换为 target 本地坐标(减去祖先链的 Bounds 原点)。</summary>
+        private static Point ToLocal(Control target, Point point)
+        {
+            double x = point.X, y = point.Y;
+            Control? c = target;
+            while (c is not null)
+            {
+                x -= c.Bounds.X;
+                y -= c.Bounds.Y;
+                c = c.Parent;
+            }
+            return new Point(x, y);
         }
 
         private void OnPlatformClosed(object? sender, EventArgs e)

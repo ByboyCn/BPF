@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Bpf.Controls.Routing;
+using Bpf.Input;
 using Bpf.Platform;
 using Bpf.PropertySystem;
 using Bpf.Utilities;
@@ -13,6 +15,9 @@ namespace Bpf.Controls
     public abstract class Control : Layoutable
     {
         private PropertyValueStore? _values;
+        // 路由事件订阅存储:key=RoutedEvent(用其 Id),value=该事件的 handler 列表。
+        // 用非泛型 RoutedEvent 键比较(通过 Id),handler 存为 Delegate。
+        private Dictionary<int, List<Delegate>>? _eventHandlers;
         private Control? _parent;
         private Control? _logicalRoot;
         private IPlatformWindow? _hostWindow;
@@ -26,7 +31,7 @@ namespace Bpf.Controls
                 if (_parent != value)
                 {
                     _parent = value;
-                    OnParentChanged(value);
+                    OnParentChanged(value!);
                 }
             }
         }
@@ -60,7 +65,7 @@ namespace Bpf.Controls
 
             if (_values.SetValue(property, value, out var oldValue))
             {
-                OnPropertyValueChanged<TValue>(property, oldValue, value);
+                OnPropertyValueChanged<TValue>(property, oldValue, value!);
             }
         }
 
@@ -147,9 +152,9 @@ namespace Bpf.Controls
             _hostWindow?.Invalidate();
         }
 
-        // ── 输入(M1 仅鼠标,通过窗口派发) ─────────────────────────────
+        // ── 输入:命中测试 + 指针(通过路由事件派发) ─────────────────────
 
-        /// <summary>命中测试:点击坐标是否落在本控件内。M1 用 Bounds 简单判断。</summary>
+        /// <summary>命中测试:点击坐标是否落在本控件内(或其子控件)。</summary>
         public virtual bool HitTest(Point point) =>
             IsVisible && Bounds.Contains(point);
 
@@ -157,24 +162,174 @@ namespace Bpf.Controls
         public virtual void OnPointerReleased(PointerEventArgs e) { }
         public virtual void OnPointerMoved(PointerEventArgs e) { }
 
+        // ── 输入:键盘(通过路由事件派发) ─────────────────────────────
+
+        public static readonly RoutedEvent<KeyEventArgs> KeyDownEvent =
+            RoutedEvent<KeyEventArgs>.Register<Control>(nameof(KeyDown), RoutingStrategies.Bubble);
+        public static readonly RoutedEvent<KeyEventArgs> KeyUpEvent =
+            RoutedEvent<KeyEventArgs>.Register<Control>(nameof(KeyUp), RoutingStrategies.Bubble);
+        public static readonly RoutedEvent<TextEventArgs> TextInputEvent =
+            RoutedEvent<TextEventArgs>.Register<Control>(nameof(TextInput), RoutingStrategies.Bubble);
+
+        public event EventHandler<KeyEventArgs>? KeyDown
+        {
+            add => AddHandler(KeyDownEvent, value!);
+            remove => RemoveHandler(KeyDownEvent, value!);
+        }
+        public event EventHandler<KeyEventArgs>? KeyUp
+        {
+            add => AddHandler(KeyUpEvent, value!);
+            remove => RemoveHandler(KeyUpEvent, value!);
+        }
+        public event EventHandler<TextEventArgs>? TextInput
+        {
+            add => AddHandler(TextInputEvent, value!);
+            remove => RemoveHandler(TextInputEvent, value!);
+        }
+
+        protected internal virtual void OnKeyDown(KeyEventArgs e) { }
+        protected internal virtual void OnKeyUp(KeyEventArgs e) { }
+        protected internal virtual void OnTextInput(TextEventArgs e) { }
+
+        // ── 焦点 ──────────────────────────────────────────────
+
+        /// <summary>是否可被聚焦(Tab 导航 / Focus())。</summary>
+        public bool IsFocusable { get; set; }
+
+        /// <summary>当前是否拥有焦点(由 FocusManager 维护)。</summary>
+        public bool IsFocused { get; internal set; }
+
+        /// <summary>请求聚焦本控件。返回是否成功(失败原因:未挂载或不可聚焦)。</summary>
+        public bool Focus()
+        {
+            if (!IsAttachedToHost || !IsFocusable) return false;
+            return FocusManager.SetFocus(this);
+        }
+
+        public static readonly RoutedEvent<FocusChangedEventArgs> GotFocusEvent =
+            RoutedEvent<FocusChangedEventArgs>.Register<Control>(nameof(GotFocus), RoutingStrategies.Bubble);
+        public static readonly RoutedEvent<FocusChangedEventArgs> LostFocusEvent =
+            RoutedEvent<FocusChangedEventArgs>.Register<Control>(nameof(LostFocus), RoutingStrategies.Bubble);
+
+        public event EventHandler<FocusChangedEventArgs>? GotFocus
+        {
+            add => AddHandler(GotFocusEvent, value!);
+            remove => RemoveHandler(GotFocusEvent, value!);
+        }
+        public event EventHandler<FocusChangedEventArgs>? LostFocus
+        {
+            add => AddHandler(LostFocusEvent, value!);
+            remove => RemoveHandler(LostFocusEvent, value!);
+        }
+
+        protected internal virtual void OnGotFocus(FocusChangedEventArgs e) { }
+        protected internal virtual void OnLostFocus(FocusChangedEventArgs e) { }
+
+        // ── 路由事件:订阅 + 派发 ──────────────────────────────────
+
+        /// <summary>订阅一个路由事件(AOT 友好:每个 RoutedEvent&lt;T&gt; 是独立泛型实例)。</summary>
+        public void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
+            where TArgs : RoutedEventArgs
+        {
+            _eventHandlers ??= new Dictionary<int, List<Delegate>>();
+            if (!_eventHandlers.TryGetValue(routedEvent.Id, out var list))
+            {
+                list = new List<Delegate>();
+                _eventHandlers[routedEvent.Id] = list;
+            }
+            list.Add(handler);
+        }
+
+        /// <summary>取消订阅一个路由事件。</summary>
+        public void RemoveHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
+            where TArgs : RoutedEventArgs
+        {
+            if (_eventHandlers is null) return;
+            if (_eventHandlers.TryGetValue(routedEvent.Id, out var list))
+            {
+                list.Remove(handler);
+                if (list.Count == 0) _eventHandlers.Remove(routedEvent.Id);
+            }
+        }
+
         /// <summary>
-        /// 公开事件版(供用户订阅)。M1 只提供 Pressed。
+        /// 在本控件上触发一个路由事件。框架构造从本控件到根的路由路径并按策略派发。
+        /// 控件内部用此方法派发输入事件(如 Button 调 RaiseEvent(ClickEvent, ...))。
+        /// 设为 internal 而非 protected,以便 Window(派生类但需对其他 Control 实例调用)
+        /// 和 FocusManager(非派生类)都能使用。
         /// </summary>
-        public event EventHandler<PointerEventArgs>? PointerPressed;
+        internal void RaiseEvent<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs e)
+            where TArgs : RoutedEventArgs
+        {
+            e.Reset(routedEvent, this);
+            EventRoute.Dispatch(routedEvent, e, this);
+        }
+
+        /// <summary>
+        /// 由 EventRoute 调用:把事件派发给本控件的虚方法 + 订阅的 handler。
+        /// 顺序:先调 On* 虚方法(控件自身处理),再调外部订阅的 handler。
+        /// </summary>
+        internal void DeliverEvent<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs e)
+            where TArgs : RoutedEventArgs
+        {
+            // 调虚方法让控件类型自身先处理
+            InvokeOnOverride(routedEvent, e);
+
+            // 再调外部订阅的 handler
+            if (_eventHandlers is not null && _eventHandlers.TryGetValue(routedEvent.Id, out var list))
+            {
+                // 复制一份避免订阅期间列表被修改
+                var handlers = list.ToArray();
+                foreach (var h in handlers)
+                {
+                    if (e.Handled) break;
+                    ((EventHandler<TArgs>)h)(this, e);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 把路由事件分发到对应的 On* 虚方法。集中映射,避免在每个 DeliverEvent 里 switch。
+        /// </summary>
+        private void InvokeOnOverride<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs e)
+            where TArgs : RoutedEventArgs
+        {
+            switch (e)
+            {
+                case KeyEventArgs ke when ReferenceEquals(routedEvent, KeyDownEvent):
+                    OnKeyDown(ke); break;
+                case KeyEventArgs ke when ReferenceEquals(routedEvent, KeyUpEvent):
+                    OnKeyUp(ke); break;
+                case TextEventArgs te when ReferenceEquals(routedEvent, TextInputEvent):
+                    OnTextInput(te); break;
+                case PointerEventArgs pe:
+                    // 指针事件不走 RoutedEvent 声明,而是通过 Position/Bucket 判断
+                    // 实际指针路由在 Window 层用 RaisePointer* + EventRoute 完成
+                    break;
+                case FocusChangedEventArgs fe when ReferenceEquals(routedEvent, GotFocusEvent):
+                    OnGotFocus(fe); break;
+                case FocusChangedEventArgs fe when ReferenceEquals(routedEvent, LostFocusEvent):
+                    OnLostFocus(fe); break;
+            }
+        }
+
+        // ── 指针事件路由派发入口(由 Window 命中测试后调用) ──────────────
 
         internal void RaisePointerPressed(PointerEventArgs e)
         {
+            e.Reset(null, this);
             OnPointerPressed(e);
-            PointerPressed?.Invoke(this, e);
         }
 
         internal void RaisePointerReleased(PointerEventArgs e)
         {
+            e.Reset(null, this);
             OnPointerReleased(e);
         }
 
         internal void RaisePointerMoved(PointerEventArgs e)
         {
+            e.Reset(null, this);
             OnPointerMoved(e);
         }
     }

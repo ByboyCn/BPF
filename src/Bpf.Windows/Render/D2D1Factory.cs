@@ -71,8 +71,8 @@ namespace Bpf.Windows.Render
                     format = D2D1.DXGI_FORMAT_B8G8R8A8_UNORM,
                     alphaMode = D2D1.D2D1_ALPHA_MODE_PREMULTIPLIED,
                 },
-                dpiX = 0, // 0 = 用桌面 DPI
-                dpiY = 0,
+                dpiX = 96, // 显式 96 DPI:DIP 坐标 = 像素坐标,与命中测试一致
+                dpiY = 96,
                 usage = D2D1.D2D1_RENDER_TARGET_USAGE_NONE,
                 minLevel = D2D1.D2D1_FEATURE_LEVEL_DEFAULT,
             };

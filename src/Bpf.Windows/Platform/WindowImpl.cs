@@ -1,7 +1,9 @@
 using System;
 using System.Runtime.InteropServices;
 using Bpf;
+using Bpf.Input;
 using Bpf.Platform;
+using Bpf.Windows.Input;
 using Bpf.Windows.Interop;
 
 namespace Bpf.Windows.Platform
@@ -25,6 +27,9 @@ namespace Bpf.Windows.Platform
         public event EventHandler<PointerEventArgs>? PointerPressed;
         public event EventHandler<PointerEventArgs>? PointerReleased;
         public event EventHandler<PointerEventArgs>? PointerMoved;
+        public event EventHandler<KeyEventArgs>? KeyDown;
+        public event EventHandler<KeyEventArgs>? KeyUp;
+        public event EventHandler<TextEventArgs>? TextInput;
         public event EventHandler? Closed;
 
         public WindowImpl(int width, int height, IPlatformRenderInterface render)
@@ -228,6 +233,35 @@ namespace Bpf.Windows.Platform
                     {
                         var p = PointFromLParam(lParam);
                         PointerMoved?.Invoke(this, new PointerEventArgs(p, PointerDeviceType.Mouse, PointerButton.None));
+                        return IntPtr.Zero;
+                    }
+
+                case User32.WM_KEYDOWN:
+                case User32.WM_SYSKEYDOWN:
+                    {
+                        var key = Win32KeyMap.MapKey(wParam);
+                        var mods = Win32KeyMap.GetModifiers();
+                        KeyDown?.Invoke(this, new KeyEventArgs(key, mods));
+                        return IntPtr.Zero;
+                    }
+
+                case User32.WM_KEYUP:
+                case User32.WM_SYSKEYUP:
+                    {
+                        var key = Win32KeyMap.MapKey(wParam);
+                        var mods = Win32KeyMap.GetModifiers();
+                        KeyUp?.Invoke(this, new KeyEventArgs(key, mods));
+                        return IntPtr.Zero;
+                    }
+
+                case User32.WM_CHAR:
+                    {
+                        // wParam 是 UTF-16 码元
+                        int ch = wParam.ToInt32() & 0xFFFF;
+                        if (ch >= 32 || ch == '\r' || ch == '\t' || ch == '\b')
+                        {
+                            TextInput?.Invoke(this, new TextEventArgs(((char)ch).ToString()));
+                        }
                         return IntPtr.Zero;
                     }
 

@@ -16,6 +16,20 @@ namespace Bpf.Windows.Interop
         public const int WM_DPICHANGED = 0x02E0;
         public const int WM_QUIT = 0x0012;
 
+        // 键盘消息
+        public const int WM_KEYDOWN = 0x0100;
+        public const int WM_KEYUP = 0x0101;
+        public const int WM_CHAR = 0x0102;
+        public const int WM_SYSKEYDOWN = 0x0104;
+        public const int WM_SYSKEYUP = 0x0105;
+
+        // 修饰键虚拟键码(用于 GetKeyState 判断修饰键状态)
+        public const int VK_SHIFT = 0x10;
+        public const int VK_CONTROL = 0x11;
+        public const int VK_MENU = 0x12;       // Alt
+        public const int VK_LWIN = 0x5B;
+        public const int VK_RWIN = 0x5C;
+
         public const int CS_HREDRAW = 0x0002;
         public const int CS_VREDRAW = 0x0001;
 
