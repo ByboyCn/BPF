@@ -66,33 +66,58 @@ app.Run();
 
 完整示例见 [`samples/Bpf.Samples.HelloWorld`](samples/Bpf.Samples.HelloWorld/Program.cs)。
 
-## 当前进度
+## 里程碑路线图
 
-项目按里程碑迭代,目前完成情况如下:
+项目按里程碑迭代。打勾 = 已完成,空框 = 未完成。
 
-### ✅ M1 — 基础骨架(已完成)
+### [x] M1 — 基础骨架
 
-- **平台抽象层**:`IPlatformBackend` / `IPlatformWindow` / `IPlatformRenderInterface` / `IRenderTarget` / `IDrawingContext` 等一套接口,核心库不耦合具体平台。
-- **Windows 后端**:基于 Win32 + Direct2D / DirectWrite 的完整后端,通过 P/Invoke 调用原生 API,窗口创建、消息循环、硬件加速绘制全部跑通。
-- **属性系统**:AOT 友好的 `StyledProperty<TValue>`,通过 `GetValue` / `SetValue` 读写,属性变更可自动触发 Measure / Arrange / Render 失效,无反射注册。
-- **控件树**:`Visual → Layoutable → Control` 继承体系,逻辑树挂载(`AttachToHost` 递归注入窗口引用)。
-- **布局系统**:`LayoutManager` 两遍布局(Measure / Arrange),已实现 `StackPanel`。
-- **基础控件**:`Window`、`TextBlock`、`Button`(含按下态、点击)、`StackPanel`(横向/纵向)。
-- **渲染管线**:Dispatcher 每帧回调 → 布局 → `BeginDraw` / 绘制 / `Present`。
-- **鼠标输入**:窗口层命中测试 + 事件派发。
+- [x] **平台抽象层**:`IPlatformBackend` / `IPlatformWindow` / `IPlatformRenderInterface` / `IRenderTarget` / `IDrawingContext`,核心库不耦合具体平台。
+- [x] **Windows 后端**:基于 Win32 + Direct2D / DirectWrite,通过 P/Invoke 调原生 API,窗口创建、消息循环、硬件加速绘制跑通。
+- [x] **属性系统**:AOT 友好的 `StyledProperty<TValue>`,`GetValue` / `SetValue` 读写,属性变更自动触发 Measure / Arrange / Render 失效,无反射注册。
+- [x] **控件树**:`Visual → Layoutable → Control` 继承体系,逻辑树挂载(`AttachToHost` 递归注入窗口引用)。
+- [x] **布局系统**:`LayoutManager` 两遍布局(Measure / Arrange)。
+- [x] **基础控件**:`Window`、`TextBlock`、`Button`(按下态 + 点击)、`StackPanel`(横向 / 纵向)。
+- [x] **渲染管线**:Dispatcher 每帧回调 → 布局 → `BeginDraw` → 绘制 → `Present`。
+- [x] **鼠标输入**:窗口层命中测试 + 事件派发。
+- [x] **NativeAOT 发布**:可 `publish /p:PublishAot=true` 编译成单 exe。
 
-### ✅ M2 — 键盘 / 焦点 / 路由事件(已完成)
+### [x] M2 — 键盘 / 焦点 / 路由事件
 
-- **路由事件系统**:`RoutedEvent<TArgs>` 泛型静态注册(与 `StyledProperty` 同构,零反射),支持 `Bubble` / `Tunnel` / `Direct` 路由策略;`Control` 上提供 `AddHandler` / `RemoveHandler` / `RaiseEvent`。
-- **键盘输入**:`Key` / `KeyModifiers` / `KeyEventArgs` / `TextEventArgs`,Windows 后端映射 `WM_KEYDOWN` / `WM_CHAR` 等消息。
-- **焦点管理**:`IsFocusable` / `IsFocused` / `Focus()`,Tab 键在可聚焦控件间切换;`Button` 聚焦时按 Enter / Space 触发 `Click`。
-- **递归命中测试**:修掉 M1 扁平一层的问题,冒泡路由让祖先控件也能收到事件。
+- [x] **路由事件系统**:`RoutedEvent<TArgs>` 泛型静态注册(与 `StyledProperty` 同构,零反射),支持 `Bubble` / `Tunnel` / `Direct` 策略;`Control` 上提供 `AddHandler` / `RemoveHandler` / `RaiseEvent`。
+- [x] **全局事件 Id**:计数器放在非泛型基类,避免不同 `TArgs` 的事件 Id 撞车导致 `InvalidCastException`。
+- [x] **键盘输入**:`Key` / `KeyModifiers` / `KeyEventArgs` / `TextEventArgs`;Windows 后端映射 `WM_KEYDOWN` / `WM_KEYUP` / `WM_CHAR`。
+- [x] **焦点管理**:`IsFocusable` / `IsFocused` / `Focus()`,全局单焦点;Tab / Shift+Tab 在可聚焦控件间切换。
+- [x] **键盘触发 Click**:焦点 `Button` 按 Enter / Space 触发 `Click`。
+- [x] **递归命中测试**:修掉 M1 只遍历一层 children 的 bug,冒泡路由让祖先控件也能收到事件。
 
-### 🚧 后续规划(未完成)
+### [ ] M3 — 交互控件 / 样式
 
-- **M3**:更多交互控件(`TextBox`、`CheckBox`、`RadioButton`)、样式系统、TabIndex / 方向键焦点导航、真正的 Tunnel 路由。
-- **更多布局面板**:`Grid`、`Canvas`。
-- **更多平台后端**:Linux / macOS 探索。
+- [ ] **文本输入**:`TextBox`(光标、选区、IME)。
+- [ ] **选择控件**:`CheckBox` / `RadioButton` / `ToggleButton`。
+- [ ] **样式系统**:Style / Setter,属性可批量应用到控件树。
+- [ ] **焦点导航增强**:`TabIndex`、方向键(Arrow)导航、焦点可视化框(FocusVisual)。
+- [ ] **真正的 Tunnel 路由**:实现 Preview 前缀事件(目前留接口未实装)。
+
+### [ ] M4 — 布局面板扩展
+
+- [ ] **Grid**:行列定义、`*` / `Auto` 尺寸、跨列跨行。
+- [ ] **Canvas**:绝对定位。
+- [ ] **DockPanel** / **WrapPanel**。
+- [ ] 布局性能:增量布局、布局裁剪。
+
+### [ ] M5 — 跨平台后端
+
+- [ ] **Linux**:尝试基于 libwayland + Skia 或 GTK 的后端。
+- [ ] **macOS**:基于 Metal / CoreGraphics 的后端。
+- [ ] 平台抽象层打磨:`IPlatformRenderInterface` 接口稳定化。
+
+### [ ] M6 — 生态(远期)
+
+- [ ] XAML / 标记语言描述 UI(需在 AOT 下用源生成器而非反射)。
+- [ ] 数据绑定(`{Binding}`)。
+- [ ] 动画系统。
+- [ ] 控件主题 / 默认样式库。
 
 ## 构建
 
