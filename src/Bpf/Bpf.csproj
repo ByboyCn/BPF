@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>Bpf</RootNamespace>
+    <AssemblyName>Bpf</AssemblyName>
+    <!-- 库本身不参与 AOT 编译,但被 net10.0 AOT 应用消费,必须全程保持 AOT 友好。
+         netstandard2.1 不支持 IsAotCompatible 分析器,这里仅做编码纪律;
+         被 net8+ 应用消费时 SDK 会自动穿透分析 IL。 -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>

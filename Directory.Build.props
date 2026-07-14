@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- AOT 友好编码纪律:统一开警告,后续可逐步升级为 error -->
+    <AnalysisLevel>preview</AnalysisLevel>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- 统一产品信息 -->
+    <Product>bpf</Product>
+    <Authors>bpf</Authors>
+    <Copyright>Copyright © bpf</Copyright>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>
