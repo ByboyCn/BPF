@@ -18,6 +18,8 @@ namespace Bpf.Controls
         // 路由事件订阅存储:key=RoutedEvent(用其 Id),value=该事件的 handler 列表。
         // 用非泛型 RoutedEvent 键比较(通过 Id),handler 存为 Delegate。
         private Dictionary<int, List<Delegate>>? _eventHandlers;
+        // 样式列表(应用于自身及后代控件)
+        internal List<Styling.Style>? _styles;
         private Control? _parent;
         private Control? _logicalRoot;
         private IPlatformWindow? _hostWindow;
@@ -42,19 +44,63 @@ namespace Bpf.Controls
         /// <summary>承载此控件的窗口(null = 未挂到窗口)。</summary>
         public IPlatformWindow? HostWindow => _hostWindow;
 
+        /// <summary>
+        /// 应用到此控件及其后代的样式列表。GetValue 查找时,后代会沿祖先链搜索匹配的 Style。
+        /// 加第一个样式时延迟初始化内部列表。
+        /// </summary>
+        public System.Collections.Generic.List<Styling.Style> Styles
+        {
+            get => _styles ??= new System.Collections.Generic.List<Styling.Style>();
+        }
+
         // ── 属性系统:StyledProperty 的 GetValue/SetValue ──────────────────────
 
         /// <summary>
-        /// 读取 StyledProperty/AttachedProperty 值。未显式设置时回落到属性的默认值。
+        /// <summary>
+        /// 读取 StyledProperty/AttachedProperty 值。
+        /// 查找顺序:本地值 → 自身+祖先的 Styles(匹配的 Setter)→ 默认值。
         /// 设为 public 以支持附加属性(Grid.GetRow(child) 需从外部读子控件值)。
         /// </summary>
         public TValue GetValue<TValue>(StyledProperty<TValue> property)
         {
+            // 1. 本地显式值优先
             if (_values is not null && _values.TryGetValue(property, out var boxed))
             {
                 return (TValue)boxed!;
             }
+            // 2. 查样式:自身 + 祖先链(最近祖先优先)
+            var setter = FindStyleSetter(property);
+            if (setter is not null)
+            {
+                return (TValue)setter.Value!;
+            }
+            // 3. 默认值
             return property.DefaultValue;
+        }
+
+        /// <summary>
+        /// 从自身和祖先链查找匹配的 Style Setter。
+        /// 查找顺序:自身 Styles → Parent.Styles → ... → root(最近祖先优先)。
+        /// </summary>
+        private Styling.Setter? FindStyleSetter(BpfProperty property)
+        {
+            Control? c = this;
+            while (c is not null)
+            {
+                if (c._styles is not null)
+                {
+                    foreach (var style in c._styles)
+                    {
+                        if (style.Matches(this))
+                        {
+                            var s = style.FindSetter(property);
+                            if (s is not null) return s;
+                        }
+                    }
+                }
+                c = c.Parent;
+            }
+            return null;
         }
 
         /// <summary>

@@ -1,8 +1,9 @@
 using System;
 using Bpf;
 using Bpf.Controls;
-using Bpf.Input;
+using Bpf.Controls.Routing;
 using Bpf.Media;
+using Bpf.Styling;
 
 namespace Bpf.Samples.HelloWorld;
 
@@ -22,84 +23,90 @@ internal static class Program
     private static void RunApp()
     {
         var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
-        var window = app.CreateWindow(600, 450);
-        window.Title = "bpf 布局面板演示 (M2.1)";
+        var window = app.CreateWindow(560, 480);
+        window.Title = "bpf 控件演示 (M3)";
 
-        // ── 用 Grid 做两行一列:顶行标题(50px),底行(*)填满剩余 ──
+        // ── 全局样式:统一 Button 配色 ──
+        window.Styles.Add(new Style<Button>()
+            .Add(Button.BackgroundProperty, new SolidColorBrush(Color.FromRgb(0x2D, 0x8C, 0xFF)))
+            .Add(Button.ForegroundProperty, new SolidColorBrush(Color.White))
+            .Add(Button.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(0x1A, 0x5C, 0xCC))));
+
+        // ── 布局:Grid 两列 ──
         var grid = new Grid();
-        grid.Rows = "50,*";
-        grid.Columns = "*";
+        grid.Columns = "180,*";
+        grid.Rows = "*";
 
-        // 顶行:标题(放在第 0 行)
-        var title = new TextBlock
+        // 左列:控件面板(StackPanel)
+        var leftPanel = new StackPanel { Orientation = Orientation.Vertical };
+        Grid.SetColumn(leftPanel, 0);
+        grid.AddChild(leftPanel);
+
+        // 右列:显示区
+        var rightPanel = new StackPanel { Orientation = Orientation.Vertical };
+        Grid.SetColumn(rightPanel, 1);
+        grid.AddChild(rightPanel);
+
+        // ── 左列控件 ──
+        leftPanel.AddChild(new TextBlock { Text = "控件演示", FontSize = 16, Foreground = new SolidColorBrush(Color.Black) });
+
+        // TextBox
+        var textBox = new TextBox { Text = "点击输入..." };
+        leftPanel.AddChild(textBox);
+
+        // CheckBox
+        var checkBox = new CheckBox { Content = "启用某功能" };
+        leftPanel.AddChild(checkBox);
+
+        // RadioButton 组
+        var rb1 = new RadioButton { Content = "选项 A", GroupName = "g1" };
+        var rb2 = new RadioButton { Content = "选项 B", GroupName = "g1" };
+        var rb3 = new RadioButton { Content = "选项 C", GroupName = "g1" };
+        rb1.IsChecked = true;
+        leftPanel.AddChild(rb1);
+        leftPanel.AddChild(rb2);
+        leftPanel.AddChild(rb3);
+
+        // Slider
+        var slider = new Slider { Minimum = 0, Maximum = 100, Value = 50 };
+        leftPanel.AddChild(slider);
+
+        // Button(受全局样式影响)
+        var btn = new Button { Content = "应用" };
+        leftPanel.AddChild(btn);
+
+        // ── 右列:状态显示 ──
+        rightPanel.AddChild(new TextBlock { Text = "当前状态", FontSize = 16, Foreground = new SolidColorBrush(Color.Black) });
+
+        var statusText = new TextBlock
         {
-            Text = "bpf 布局面板演示",
-            FontSize = 20,
-            Foreground = new SolidColorBrush(Color.Black),
+            Text = "TextBox: 点击输入...\nCheckBox: 未勾选\nRadioButton: 选项 A\nSlider: 50",
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)),
         };
-        Grid.SetRow(title, 0);
-        grid.AddChild(title);
+        rightPanel.AddChild(statusText);
 
-        // 底行:DockPanel(放在第 1 行)
-        var dock = new DockPanel();
-        Grid.SetRow(dock, 1);
-        grid.AddChild(dock);
+        // ── 事件:更新状态 ──
+        textBox.KeyDown += (s, e) => { UpdateStatus(); };
+        checkBox.Checked += (s, e) => UpdateStatus();
+        checkBox.Unchecked += (s, e) => UpdateStatus();
+        rb1.Checked += (s, e) => UpdateStatus();
+        rb2.Checked += (s, e) => UpdateStatus();
+        rb3.Checked += (s, e) => UpdateStatus();
+        slider.ValueChanged += (s, e) => UpdateStatus();
+        btn.Click += (s, e) => { statusText.Text = "已点击[应用]!"; };
 
-        // ── DockPanel:顶部停靠提示,Bottom 停靠 Border 包裹的计数器,中间 Fill 放 Canvas ──
-        var hint = new TextBlock
+        void UpdateStatus()
         {
-            Text = "Canvas 上有两个按钮(绝对定位),点击试试",
-            FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)),
-        };
-        DockPanel.SetDock(hint, Dock.Top);
-        dock.AddChild(hint);
+            string rb = rb1.IsChecked ? "A" : rb2.IsChecked ? "B" : rb3.IsChecked ? "C" : "无";
+            statusText.Text =
+                $"TextBox: {textBox.Text}\n" +
+                $"CheckBox: {(checkBox.IsChecked ? "已勾选" : "未勾选")}\n" +
+                $"RadioButton: 选项 {rb}\n" +
+                $"Slider: {slider.Value:F0}";
+        }
 
-        // Bottom:用 Border 包裹计数器(带圆角边框)
-        var counterBorder = new Border
-        {
-            Background = new SolidColorBrush(Color.FromRgb(0xF0, 0xF0, 0xFF)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0xCC)),
-            BorderThickness = 1,
-            CornerRadius = 4,
-            Padding = 6,
-        };
-        var counter = new TextBlock
-        {
-            Text = "点击次数:0",
-            FontSize = 14,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x88)),
-        };
-        counterBorder.Child = counter;
-        DockPanel.SetDock(counterBorder, Dock.Bottom);
-        dock.AddChild(counterBorder);
-
-        // Fill(LastChildFill 默认 true):Canvas
-        var canvas = new Canvas();
-        dock.AddChild(canvas);
-
-        // ── Canvas:两个绝对定位的按钮 ──
-        var incBtn = new Button { Content = "加一 (+)", FontSize = 14 };
-        Canvas.SetLeft(incBtn, 30);
-        Canvas.SetTop(incBtn, 30);
-        Canvas.SetZIndex(incBtn, 1);
-        canvas.AddChild(incBtn);
-
-        var decBtn = new Button { Content = "减一 (-)", FontSize = 14 };
-        Canvas.SetLeft(decBtn, 180);
-        Canvas.SetTop(decBtn, 60);
-        Canvas.SetZIndex(decBtn, 2); // 高 ZIndex,在上层
-        canvas.AddChild(decBtn);
-
-        // ── 事件 ──
-        incBtn.Click += (s, e) => { _clickCount++; counter.Text = $"点击次数:{_clickCount}"; };
-        decBtn.Click += (s, e) => { _clickCount--; counter.Text = $"点击次数:{_clickCount}"; };
-
-        // 设为根面板
         window.SetContent(grid);
-
         app.Run();
     }
-
-    private static int _clickCount;
 }
