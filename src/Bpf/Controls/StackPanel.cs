@@ -115,7 +115,7 @@ namespace Bpf.Controls
             {
                 if (!child.IsVisible) continue;
 
-                context.PushTranslate(new Vector(child.Bounds.X, child.Bounds.Y));
+                context.PushTranslate(new Vector(child.Bounds.X - Bounds.X, child.Bounds.Y - Bounds.Y));
                 try
                 {
                     child.Render(context);
@@ -139,10 +139,12 @@ namespace Bpf.Controls
         }
     }
 
-    /// <summary>面板标记接口。</summary>
+    /// <summary>面板接口:持有子控件集合并能增删。</summary>
     public interface IPanel
     {
         IReadOnlyList<Control> Children { get; }
+        void AddChild(Control child);
+        void RemoveChild(Control child);
     }
 
     public enum Orientation

@@ -45,9 +45,10 @@ namespace Bpf.Controls
         // ── 属性系统:StyledProperty 的 GetValue/SetValue ──────────────────────
 
         /// <summary>
-        /// 读取 StyledProperty 值。未显式设置时回落到属性的默认值。
+        /// 读取 StyledProperty/AttachedProperty 值。未显式设置时回落到属性的默认值。
+        /// 设为 public 以支持附加属性(Grid.GetRow(child) 需从外部读子控件值)。
         /// </summary>
-        protected TValue GetValue<TValue>(StyledProperty<TValue> property)
+        public TValue GetValue<TValue>(StyledProperty<TValue> property)
         {
             if (_values is not null && _values.TryGetValue(property, out var boxed))
             {
@@ -57,9 +58,10 @@ namespace Bpf.Controls
         }
 
         /// <summary>
-        /// 写入 StyledProperty 值。变更会触发 AffectsMeasure/Arrange/Render 失效。
+        /// 写入 StyledProperty/AttachedProperty 值。变更会触发 AffectsMeasure/Arrange/Render 失效。
+        /// 设为 public 以支持附加属性(Grid.SetRow(child, 1) 需从外部写子控件值)。
         /// </summary>
-        protected void SetValue<TValue>(StyledProperty<TValue> property, TValue value)
+        public void SetValue<TValue>(StyledProperty<TValue> property, TValue value)
         {
             _values ??= new PropertyValueStore();
 
@@ -70,7 +72,7 @@ namespace Bpf.Controls
         }
 
         /// <summary>清空属性值,回落到默认值。</summary>
-        protected void ClearValue<TValue>(StyledProperty<TValue> property)
+        public void ClearValue<TValue>(StyledProperty<TValue> property)
         {
             // M1 简化:直接置为默认值
             SetValue(property, property.DefaultValue);

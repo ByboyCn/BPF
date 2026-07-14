@@ -17,7 +17,7 @@ namespace Bpf.Controls
         private IPlatformWindow? _platformWindow;
         private IRenderTarget? _renderTarget;
         private LayoutManager? _layoutManager;
-        private readonly Controls.StackPanel _rootPanel;
+        private Control _rootPanel;
 
         // ── 标题属性 ──
         public static readonly StyledProperty<string> TitleProperty =
@@ -47,13 +47,38 @@ namespace Bpf.Controls
             _rootPanel.Parent = this;
         }
 
-        /// <summary>窗口内容(根面板)。</summary>
-        public Controls.StackPanel Content => _rootPanel;
+        /// <summary>窗口内容(根面板)。默认是垂直 StackPanel。</summary>
+        public Control Content => _rootPanel;
 
-        public IReadOnlyList<Control> Children => _rootPanel.Children;
+        /// <summary>替换根面板。若窗口已 attach,会重建 LayoutManager 并把新子树 attach 到 host。</summary>
+        public void SetContent(Control panel)
+        {
+            if (panel is null) throw new ArgumentNullException(nameof(panel));
+            _rootPanel = panel;
+            panel.Parent = this;
 
-        public void AddChild(Control child) => _rootPanel.AddChild(child);
-        public void RemoveChild(Control child) => _rootPanel.RemoveChild(child);
+            // 若已 attach,重建 LayoutManager 指向新根,并 attach 新子树
+            if (_platformWindow is not null)
+            {
+                _layoutManager = new LayoutManager(panel);
+                panel.AttachToHost(_platformWindow, logicalRoot: this);
+                _platformWindow.Invalidate();
+            }
+        }
+
+        public IReadOnlyList<Control> Children =>
+            (_rootPanel as IPanel)?.Children ?? Array.Empty<Control>();
+
+        public void AddChild(Control child)
+        {
+            if (_rootPanel is IPanel panel) panel.AddChild(child);
+            else throw new InvalidOperationException("根面板不支持 AddChild(非 IPanel)。");
+        }
+
+        public void RemoveChild(Control child)
+        {
+            if (_rootPanel is IPanel panel) panel.RemoveChild(child);
+        }
 
         // ── 接入平台窗口 ──
 
@@ -160,9 +185,9 @@ namespace Bpf.Controls
         }
 
         /// <summary>
-        /// 递归找最深命中的控件。point 始终在 control 的父坐标系(对 root 是窗口坐标)。
-        /// 关键:child.Bounds 也在同一父坐标系,直接用 Contains 判断,不要做坐标转换。
-        /// 只有进入子控件内部递归时,才把 point 转换到子控件的父坐标系(即减去 child.Bounds 原点)。
+        /// 递归找最深命中的控件。point 始终是窗口坐标(不转换)。
+        /// 所有控件的 Bounds 经 ArrangeCore 统一在父坐标系,而每层 ArrangeCore 都加上 finalRect
+        /// 原点,因此嵌套面板的子控件 Bounds 实际都在窗口坐标系 —— point 和 Bounds 可直接比较。
         /// </summary>
         private static Control? FindHitTestTarget(Control control, Point point)
         {
@@ -176,11 +201,10 @@ namespace Bpf.Controls
                 for (int i = panel.Children.Count - 1; i >= 0; i--)
                 {
                     var child = panel.Children[i];
-                    // child.Bounds 在 control 的坐标系里,point 也在,直接判断
+                    // child.Bounds 和 point 同在窗口坐标系,直接判断
                     if (!child.Bounds.Contains(point)) continue;
-                    // 命中 child:转换到 child 的坐标系(减去 child.Bounds 原点),递归
-                    var childLocal = new Point(point.X - child.Bounds.X, point.Y - child.Bounds.Y);
-                    var hit = FindHitTestTarget(child, childLocal);
+                    // 命中 child,递归(不转换 point,保持窗口坐标)
+                    var hit = FindHitTestTarget(child, point);
                     if (hit is not null) return hit;
                     // child 内部未命中更深的,但 child 自身命中 —— 返回 child
                     return child;
@@ -192,17 +216,12 @@ namespace Bpf.Controls
         }
 
         /// <summary>把窗口坐标系下的 point 转换为 target 本地坐标(减去祖先链的 Bounds 原点)。</summary>
+        /// <summary>把窗口坐标 point 转为 target 本地坐标。
+        /// 所有 Bounds 在窗口坐标系(ArrangeCore 统一加 finalRect 原点),
+        /// 所以 local = point - target.Bounds.Origin。</summary>
         private static Point ToLocal(Control target, Point point)
         {
-            double x = point.X, y = point.Y;
-            Control? c = target;
-            while (c is not null)
-            {
-                x -= c.Bounds.X;
-                y -= c.Bounds.Y;
-                c = c.Parent;
-            }
-            return new Point(x, y);
+            return new Point(point.X - target.Bounds.X, point.Y - target.Bounds.Y);
         }
 
         private void OnPlatformClosed(object? sender, EventArgs e)

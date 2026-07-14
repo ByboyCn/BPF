@@ -1,7 +1,6 @@
 using System;
 using Bpf;
 using Bpf.Controls;
-using Bpf.Controls.Routing;
 using Bpf.Input;
 using Bpf.Media;
 
@@ -11,10 +10,7 @@ internal static class Program
 {
     private static void Main()
     {
-        try
-        {
-            RunApp();
-        }
+        try { RunApp(); }
         catch (Exception ex)
         {
             System.Console.Error.WriteLine($"[bpf FATAL] {ex}");
@@ -25,80 +21,83 @@ internal static class Program
 
     private static void RunApp()
     {
-        // 1. 初始化 Windows 后端
         var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
+        var window = app.CreateWindow(600, 450);
+        window.Title = "bpf 布局面板演示 (M2.1)";
 
-        // 2. 创建窗口
-        var window = app.CreateWindow(480, 400);
-        window.Title = "bpf Hello World";
+        // ── 用 Grid 做两行一列:顶行标题(50px),底行(*)填满剩余 ──
+        var grid = new Grid();
+        grid.Rows = "50,*";
+        grid.Columns = "*";
 
-        // 3. 内容:标题 + 计数器 + 两个按钮(演示 Tab 切焦点)
+        // 顶行:标题(放在第 0 行)
         var title = new TextBlock
         {
-            Text = "你好,bpf!",
-            FontSize = 24,
+            Text = "bpf 布局面板演示",
+            FontSize = 20,
             Foreground = new SolidColorBrush(Color.Black),
         };
-        window.AddChild(title);
+        Grid.SetRow(title, 0);
+        grid.AddChild(title);
 
+        // 底行:DockPanel(放在第 1 行)
+        var dock = new DockPanel();
+        Grid.SetRow(dock, 1);
+        grid.AddChild(dock);
+
+        // ── DockPanel:顶部停靠提示,Bottom 停靠 Border 包裹的计数器,中间 Fill 放 Canvas ──
         var hint = new TextBlock
         {
-            Text = "Tab 切焦点,Enter/Space 触发,Esc 重置",
+            Text = "Canvas 上有两个按钮(绝对定位),点击试试",
             FontSize = 12,
             Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)),
         };
-        window.AddChild(hint);
+        DockPanel.SetDock(hint, Dock.Top);
+        dock.AddChild(hint);
 
+        // Bottom:用 Border 包裹计数器(带圆角边框)
+        var counterBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0xF0, 0xF0, 0xFF)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0xCC)),
+            BorderThickness = 1,
+            CornerRadius = 4,
+            Padding = 6,
+        };
         var counter = new TextBlock
         {
             Text = "点击次数:0",
-            FontSize = 16,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)),
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x88)),
         };
-        window.AddChild(counter);
+        counterBorder.Child = counter;
+        DockPanel.SetDock(counterBorder, Dock.Bottom);
+        dock.AddChild(counterBorder);
 
+        // Fill(LastChildFill 默认 true):Canvas
+        var canvas = new Canvas();
+        dock.AddChild(canvas);
+
+        // ── Canvas:两个绝对定位的按钮 ──
         var incBtn = new Button { Content = "加一 (+)", FontSize = 14 };
+        Canvas.SetLeft(incBtn, 30);
+        Canvas.SetTop(incBtn, 30);
+        Canvas.SetZIndex(incBtn, 1);
+        canvas.AddChild(incBtn);
+
         var decBtn = new Button { Content = "减一 (-)", FontSize = 14 };
-        var keyLog = new TextBlock
-        {
-            Text = "(等待键盘事件冒泡...)",
-            FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x44, 0x00)),
-        };
+        Canvas.SetLeft(decBtn, 180);
+        Canvas.SetTop(decBtn, 60);
+        Canvas.SetZIndex(decBtn, 2); // 高 ZIndex,在上层
+        canvas.AddChild(decBtn);
 
-        // 4. 事件:按钮点击改变计数
-        incBtn.Click += (s, e) =>
-        {
-            _clickCount++;
-            counter.Text = $"点击次数:{_clickCount}";
-        };
-        decBtn.Click += (s, e) =>
-        {
-            _clickCount--;
-            counter.Text = $"点击次数:{_clickCount}";
-        };
+        // ── 事件 ──
+        incBtn.Click += (s, e) => { _clickCount++; counter.Text = $"点击次数:{_clickCount}"; };
+        decBtn.Click += (s, e) => { _clickCount--; counter.Text = $"点击次数:{_clickCount}"; };
 
-        window.AddChild(incBtn);
-        window.AddChild(decBtn);
-        window.AddChild(keyLog);
+        // 设为根面板
+        window.SetContent(grid);
 
-        // 5. 路由事件冒泡演示:在窗口层订阅 KeyDown,任何子控件按键都会冒泡到这里
-        window.AddHandler(Control.KeyDownEvent, new EventHandler<KeyEventArgs>((s, e) =>
-        {
-            // 这里收到的 e.Source 是冒泡路径上当前控件,OriginalSource 是最初触发者
-            var src = e.OriginalSource?.GetType().Name ?? "?";
-            keyLog.Text = $"[冒泡] 键={e.Key} 修饰={e.Modifiers} 源={src}";
-        }));
-
-        // 6. 演示 AddHandler 订阅 Click 的冒泡:窗口层也能收到按钮的 Click
-        window.AddHandler(Button.ClickEvent, new EventHandler<RoutedEventArgs>((s, e) =>
-        {
-            var src = e.OriginalSource;
-            System.Console.Error.WriteLine($"[bpf] 窗口层收到 Click 冒泡,源={src?.GetType().Name}");
-            System.Console.Error.Flush();
-        }));
-
-        // 7. 运行
         app.Run();
     }
 

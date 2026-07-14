@@ -4,9 +4,10 @@ namespace Bpf.PropertySystem
 {
     /// <summary>
     /// 样式化属性。带默认值,可被样式/绑定覆盖。AOT 友好:每个声明独立泛型实例。
+    /// 注意:非 sealed,以允许 <see cref="AttachedProperty{TValue}"/> 继承。
     /// </summary>
     /// <typeparam name="TValue">属性值类型。</typeparam>
-    public sealed class StyledProperty<TValue> : BpfProperty
+    public class StyledProperty<TValue> : BpfProperty
     {
         /// <summary>默认值(在未设置任何值时返回)。</summary>
         public TValue DefaultValue { get; }
