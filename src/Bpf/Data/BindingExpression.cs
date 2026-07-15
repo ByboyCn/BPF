@@ -48,6 +48,13 @@ namespace Bpf.Data
             var value = _binding.Evaluate();
             if (value is null) return;
 
+            // 应用值转换器(源→目标)
+            if (_binding.Converter is not null)
+            {
+                value = _binding.Converter.Convert(value, _property.PropertyType, _binding.ConverterParameter);
+                if (value is null) return;
+            }
+
             _isUpdating = true;
             try
             {
@@ -66,6 +73,14 @@ namespace Bpf.Data
         {
             if (_isUpdating) return; // 防重入
             if (_binding.Mode != BindingMode.TwoWay) return;
+
+            // 反向转换(目标→源)
+            if (_binding.Converter is not null)
+            {
+                newValue = _binding.Converter.ConvertBack(newValue,
+                    _property.PropertyType, _binding.ConverterParameter);
+            }
+
             _binding.SetValue(newValue);
         }
 

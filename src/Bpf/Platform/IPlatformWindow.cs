@@ -53,6 +53,9 @@ namespace Bpf.Platform
         /// <summary>文本输入(WM_CHAR,用于字符输入)。</summary>
         event EventHandler<TextEventArgs>? TextInput;
 
+        /// <summary>鼠标滚轮(WM_MOUSEWHEEL)。</summary>
+        event EventHandler<MouseWheelEventArgs>? MouseWheel;
+
         /// <summary>窗口关闭请求。</summary>
         event EventHandler? Closed;
     }

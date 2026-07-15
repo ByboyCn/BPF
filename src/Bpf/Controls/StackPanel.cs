@@ -110,20 +110,29 @@ namespace Bpf.Controls
 
         public override void Render(Platform.IDrawingContext context)
         {
-            // 面板本身不画,依次绘制子控件。每个子控件需要平移到自己 Bounds 的原点。
+            // 先画 RenderOnTop=false 的,再画 true 的(ComboBox 展开时浮在最上层)
             foreach (var child in _children)
             {
-                if (!child.IsVisible) continue;
+                if (!child.IsVisible || child.RenderOnTop) continue;
+                RenderChild(context, child);
+            }
+            foreach (var child in _children)
+            {
+                if (!child.IsVisible || !child.RenderOnTop) continue;
+                RenderChild(context, child);
+            }
+        }
 
-                context.PushTranslate(new Vector(child.Bounds.X - Bounds.X, child.Bounds.Y - Bounds.Y));
-                try
-                {
-                    child.Render(context);
-                }
-                finally
-                {
-                    context.PopTransform();
-                }
+        private void RenderChild(Platform.IDrawingContext context, Control child)
+        {
+            context.PushTranslate(new Vector(child.Bounds.X - Bounds.X, child.Bounds.Y - Bounds.Y));
+            try
+            {
+                child.Render(context);
+            }
+            finally
+            {
+                context.PopTransform();
             }
         }
 

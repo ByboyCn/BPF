@@ -17,8 +17,12 @@ namespace Bpf.Layout
             _root = root ?? throw new ArgumentNullException(nameof(root));
         }
 
-        /// <summary>标记需要重做布局。</summary>
-        public void Invalidate() => _layoutQueued = true;
+        /// <summary>标记需要重做布局(强制根节点重新 Measure)。</summary>
+        public void Invalidate()
+        {
+            _layoutQueued = true;
+            _root.InvalidateMeasure();
+        }
 
         /// <summary>
         /// 在渲染前执行布局。若根尺寸有效则执行 Measure + Arrange。

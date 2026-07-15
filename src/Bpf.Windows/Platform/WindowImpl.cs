@@ -30,6 +30,7 @@ namespace Bpf.Windows.Platform
         public event EventHandler<KeyEventArgs>? KeyDown;
         public event EventHandler<KeyEventArgs>? KeyUp;
         public event EventHandler<TextEventArgs>? TextInput;
+        public event EventHandler<MouseWheelEventArgs>? MouseWheel;
         public event EventHandler? Closed;
 
         public WindowImpl(int width, int height, IPlatformRenderInterface render)
@@ -262,6 +263,26 @@ namespace Bpf.Windows.Platform
                         {
                             TextInput?.Invoke(this, new TextEventArgs(((char)ch).ToString()));
                         }
+                        return IntPtr.Zero;
+                    }
+
+                case User32.WM_MOUSEWHEEL:
+                    {
+                        // wParam 高字是有符号 delta(标准一格=120),低字是按键状态
+                        // 用 ToInt64 避免 checked 上下文下的 OverflowException
+                        long wParam64 = wParam.ToInt64();
+                        short delta = (short)((wParam64 >> 16) & 0xFFFF);
+                        // lParam 是屏幕坐标,需转客户区坐标
+                        long lParam64 = lParam.ToInt64();
+                        var screenPoint = new User32.POINT
+                        {
+                            X = (int)(short)(lParam64 & 0xFFFF),
+                            Y = (int)(short)((lParam64 >> 16) & 0xFFFF),
+                        };
+                        User32.ScreenToClient(_hwnd, ref screenPoint);
+                        double s = Scaling;
+                        var pos = new Point(screenPoint.X / s, screenPoint.Y / s);
+                        MouseWheel?.Invoke(this, new MouseWheelEventArgs(pos, delta));
                         return IntPtr.Zero;
                     }
 

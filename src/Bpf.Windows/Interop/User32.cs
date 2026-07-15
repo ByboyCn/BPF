@@ -21,6 +21,7 @@ namespace Bpf.Windows.Interop
         public const int WM_KEYUP = 0x0101;
         public const int WM_CHAR = 0x0102;
         public const int WM_SYSKEYDOWN = 0x0104;
+        public const int WM_MOUSEWHEEL = 0x020A;
         public const int WM_SYSKEYUP = 0x0105;
 
         // 修饰键虚拟键码(用于 GetKeyState 判断修饰键状态)
@@ -206,6 +207,10 @@ namespace Bpf.Windows.Interop
 
         [DllImport("user32.dll")]
         public static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
+
+        // 鼠标滚轮:WM_MOUSEWHEEL 的 lParam 是屏幕坐标,需转客户区坐标
+        [DllImport("user32.dll")]
+        public static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
 
         public const int SM_CXSCREEN = 0;
         public const int SM_CYSCREEN = 1;

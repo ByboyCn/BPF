@@ -19,6 +19,12 @@ namespace Bpf.Data
         /// <summary>绑定方向。</summary>
         public BindingMode Mode { get; set; }
 
+        /// <summary>值转换器(源→目标方向)。null = 不转换。</summary>
+        public IValueConverter? Converter { get; set; }
+
+        /// <summary>转换器参数。</summary>
+        public object? ConverterParameter { get; set; }
+
         public Binding(object? source, string path, BindingMode mode = BindingMode.OneWay)
         {
             Source = source;

@@ -280,10 +280,29 @@ namespace Bpf.Controls
         protected internal virtual void OnKeyUp(KeyEventArgs e) { }
         protected internal virtual void OnTextInput(TextEventArgs e) { }
 
+        // ── 鼠标滚轮 ──
+
+        public static readonly RoutedEvent<MouseWheelEventArgs> MouseWheelEvent =
+            RoutedEvent<MouseWheelEventArgs>.Register<Control>(nameof(MouseWheel), RoutingStrategies.Bubble);
+
+        public event EventHandler<MouseWheelEventArgs>? MouseWheel
+        {
+            add => AddHandler(MouseWheelEvent, value!);
+            remove => RemoveHandler(MouseWheelEvent, value!);
+        }
+
+        protected internal virtual void OnMouseWheel(MouseWheelEventArgs e) { }
+
         // ── 焦点 ──────────────────────────────────────────────
 
         /// <summary>是否可被聚焦(Tab 导航 / Focus())。</summary>
         public bool IsFocusable { get; set; }
+
+        /// <summary>
+        /// 是否需要在同层控件之上渲染(最后画)。ComboBox 展开下拉时设为 true。
+        /// 面板(Render/StackPanel/Grid 等)先把 RenderOnTop=false 的子控件画完,再画 true 的。
+        /// </summary>
+        internal bool RenderOnTop { get; set; }
 
         /// <summary>当前是否拥有焦点(由 FocusManager 维护)。</summary>
         public bool IsFocused { get; internal set; }
@@ -391,6 +410,8 @@ namespace Bpf.Controls
                     OnKeyUp(ke); break;
                 case TextEventArgs te when ReferenceEquals(routedEvent, TextInputEvent):
                     OnTextInput(te); break;
+                case MouseWheelEventArgs mwe when ReferenceEquals(routedEvent, MouseWheelEvent):
+                    OnMouseWheel(mwe); break;
                 case PointerEventArgs pe:
                     // 指针事件不走 RoutedEvent 声明,而是通过 Position/Bucket 判断
                     // 实际指针路由在 Window 层用 RaisePointer* + EventRoute 完成

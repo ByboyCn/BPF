@@ -79,7 +79,14 @@ namespace Bpf.Controls
             if (!_measureInvalidated)
             {
                 _measureInvalidated = true;
+                // 排列也失效(测量变了必须重排)
+                _arrangeInvalidated = true;
                 OnInvalidateMeasureRequested?.Invoke(this, EventArgs.Empty);
+            }
+            // 关键:向上传播,让父控件也失效(否则父.Measure 缓存命中会跳过对本控件的重测)
+            if (this is Control c && c.Parent is Control parent)
+            {
+                parent.InvalidateMeasure();
             }
         }
 

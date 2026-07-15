@@ -101,6 +101,7 @@ namespace Bpf.Controls
             platformWindow.KeyDown += OnPlatformKeyDown;
             platformWindow.KeyUp += OnPlatformKeyUp;
             platformWindow.TextInput += OnPlatformTextInput;
+            platformWindow.MouseWheel += OnPlatformMouseWheel;
             platformWindow.Closed += OnPlatformClosed;
 
             // 应用标题
@@ -142,6 +143,12 @@ namespace Bpf.Controls
         {
             var target = FocusManager.Focused ?? (Control)_rootPanel;
             target.RaiseEvent(Control.TextInputEvent, e);
+        }
+
+        private void OnPlatformMouseWheel(object? sender, MouseWheelEventArgs e)
+        {
+            var target = FindHitTestTarget(_rootPanel, e.Position) ?? _rootPanel;
+            target.RaiseEvent(Control.MouseWheelEvent, e);
         }
 
         private void OnPlatformResized(object? sender, SizeChangedEventArgs e)
@@ -195,20 +202,42 @@ namespace Bpf.Controls
             if (!control.Bounds.Contains(point)) return null;
 
             // 命中本控件。优先深入子控件找更深的命中者。
+
+            // 多子容器(IPanel):遍历 children,RenderOnTop 的优先(在上层)
             if (control is IPanel panel)
             {
-                // 倒序遍历:后绘制的在上层,优先命中
+                // 先测 RenderOnTop 的(展开的 ComboBox 等)
                 for (int i = panel.Children.Count - 1; i >= 0; i--)
                 {
                     var child = panel.Children[i];
-                    // child.Bounds 和 point 同在窗口坐标系,直接判断
+                    if (!child.RenderOnTop) continue;
                     if (!child.Bounds.Contains(point)) continue;
-                    // 命中 child,递归(不转换 point,保持窗口坐标)
                     var hit = FindHitTestTarget(child, point);
                     if (hit is not null) return hit;
-                    // child 内部未命中更深的,但 child 自身命中 —— 返回 child
                     return child;
                 }
+                // 再测普通的
+                for (int i = panel.Children.Count - 1; i >= 0; i--)
+                {
+                    var child = panel.Children[i];
+                    if (child.RenderOnTop) continue;
+                    if (!child.Bounds.Contains(point)) continue;
+                    var hit = FindHitTestTarget(child, point);
+                    if (hit is not null) return hit;
+                    return child;
+                }
+            }
+
+            // 单子装饰器(IContentHost:ScrollViewer/Border):递归进内部 child
+            if (control is IContentHost contentHost && contentHost.ContentChild is Control innerChild)
+            {
+                if (innerChild.Bounds.Contains(point))
+                {
+                    var hit = FindHitTestTarget(innerChild, point);
+                    if (hit is not null) return hit;
+                }
+                // child 未命中或无更深层,返回装饰器本身
+                return control;
             }
 
             // 叶子控件,或容器自身命中区(无子命中)
@@ -249,6 +278,9 @@ namespace Bpf.Controls
             if (_platformWindow is null || _renderTarget is null) return;
 
             var size = _platformWindow.ClientSize;
+            // M4.1:每帧重排队布局(ExecuteLayout 内部有缓存,仅在尺寸/失效时才真正重算)。
+            // 这样控件运行时变化(如 ComboBox 展开、属性 AffectsMeasure)能立即触发重布局。
+            _layoutManager?.Invalidate();
             _layoutManager?.ExecuteLayout(size);
 
             using var ctx = _renderTarget.BeginDraw();

@@ -9,7 +9,7 @@ namespace Bpf.Controls
     /// 装饰容器:带背景、边框、圆角、Padding,包裹单个子控件。
     /// 不是 IPanel(只有一个 Child)。参照 Button 内嵌 TextBlock 的 attach 模式。
     /// </summary>
-    public sealed class Border : Control
+    public sealed class Border : Control, IContentHost
     {
         private Control? _child;
 
@@ -94,6 +94,9 @@ namespace Bpf.Controls
         {
             _child?.AttachToHost(window, logicalRoot);
         }
+
+        // ── IContentHost:供命中测试遍历 ──
+        Control? IContentHost.ContentChild => _child;
 
         // ── 布局 ──
 

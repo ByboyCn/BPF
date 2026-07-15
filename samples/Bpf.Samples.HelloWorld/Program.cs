@@ -4,7 +4,6 @@ using Bpf.Controls;
 using Bpf.Controls.Routing;
 using Bpf.Data;
 using Bpf.Media;
-using Bpf.Styling;
 
 namespace Bpf.Samples.HelloWorld;
 
@@ -24,94 +23,105 @@ internal static class Program
     private static void RunApp()
     {
         var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
-        var window = app.CreateWindow(600, 440);
-        window.Title = "bpf 数据绑定 + ListBox (M4)";
+        var window = app.CreateWindow(600, 500);
+        window.Title = "bpf M4.1: ScrollViewer + ComboBox + Converter";
 
-        // ── 数据:Person 列表 ──
-        var people = new ObservableCollection<Person>
-        {
-            new Person { Name = "Alice", Age = 28 },
-            new Person { Name = "Bob", Age = 35 },
-            new Person { Name = "Charlie", Age = 22 },
-            new Person { Name = "Diana", Age = 40 },
-        };
+        // ── 数据:15 个人(验证 ScrollViewer 滚动) ──
+        var people = new ObservableCollection<Person>();
+        for (int i = 0; i < 15; i++)
+            people.Add(new Person { Name = $"用户 {i + 1}", Age = 20 + i });
 
         // ── 布局:Grid 两列 ──
         var grid = new Grid();
         grid.Columns = "200,*";
         grid.Rows = "*";
 
-        // 左列:ListBox
-        var listBox = new ListBox
-        {
-            ItemsSource = people,
-            FontSize = 14,
-        };
-        Grid.SetColumn(listBox, 0);
-        grid.AddChild(listBox);
+        // 左列:ScrollViewer 包裹 ListBox(15 项,超出可滚动)
+        var scrollViewer = new ScrollViewer();
+        Grid.SetColumn(scrollViewer, 0);
+        grid.AddChild(scrollViewer);
 
-        // 右列:编辑面板
+        var listBox = new ListBox { ItemsSource = people, FontSize = 14 };
+        scrollViewer.Child = listBox;
+
+        // 右列:控件演示面板
         var rightPanel = new StackPanel { Orientation = Orientation.Vertical };
         Grid.SetColumn(rightPanel, 1);
         grid.AddChild(rightPanel);
 
-        rightPanel.AddChild(new TextBlock { Text = "编辑选中项", FontSize = 16, Foreground = new SolidColorBrush(Color.Black) });
+        // 标题
+        rightPanel.AddChild(new Label { Text = "M4.1 新功能演示", FontSize = 16 });
 
-        // TextBox 绑定 Name(OneWay,手动同步)
+        // Image 占位
+        rightPanel.AddChild(new TextBlock { Text = "Image 占位控件:", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)) });
+        rightPanel.AddChild(new Image { Width = 80, Height = 60 });
+
+        // ComboBox(选择城市)
+        var cities = new[] { "北京", "上海", "广州", "深圳", "杭州" };
+        rightPanel.AddChild(new TextBlock { Text = "ComboBox:", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)) });
+        var comboBox = new ComboBox
+        {
+            ItemsSource = cities,
+            FontSize = 14,
+        };
+        rightPanel.AddChild(comboBox);
+
+        // 选中人信息显示(用 Converter 演示)
+        rightPanel.AddChild(new TextBlock { Text = "选中信息:", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)) });
+
         var nameBox = new TextBox { Text = "(选择一个人)" };
         rightPanel.AddChild(nameBox);
 
-        // Slider 绑定 Age
         var ageSlider = new Slider { Minimum = 0, Maximum = 100, Value = 0 };
         rightPanel.AddChild(ageSlider);
 
-        var ageLabel = new TextBlock { Text = "年龄: 0", FontSize = 14, Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)) };
+        // Converter 演示:Slider 的 double 值 → 整数字符串
+        var ageLabel = new Label { Text = "年龄: 0", FontSize = 14 };
         rightPanel.AddChild(ageLabel);
 
-        var nameLabel = new TextBlock { Text = "姓名: -", FontSize = 14, Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)) };
-        rightPanel.AddChild(nameLabel);
+        var cityLabel = new Label { Text = "城市: -", FontSize = 14 };
+        rightPanel.AddChild(cityLabel);
 
-        // ── 同步逻辑(ListBox 选择 → 编辑框) ──
+        // ── 事件同步 ──
         listBox.SelectionChanged += (s, e) =>
         {
-            var selected = listBox.SelectedItem as Person;
-            if (selected is null)
+            if (listBox.SelectedItem is Person p)
             {
-                nameBox.Text = "(无选中)";
-                ageSlider.Value = 0;
-                nameLabel.Text = "姓名: -";
-                ageLabel.Text = "年龄: -";
-            }
-            else
-            {
-                nameBox.Text = selected.Name;
-                ageSlider.Value = selected.Age;
-                nameLabel.Text = $"姓名: {selected.Name}";
-                ageLabel.Text = $"年龄: {selected.Age}";
+                nameBox.Text = p.Name;
+                ageSlider.Value = p.Age;
+                ageLabel.Text = $"年龄: {p.Age}";
             }
         };
 
-        // TextBox 改 → 回写 Person.Name(ListBox 自动监听 PropertyChanged 刷新)
+        // TextBox 改 → 回写 Person.Name
         nameBox.TextChanged += (s, e) =>
         {
             if (listBox.SelectedItem is Person p)
             {
                 p.Name = nameBox.Text;
-                nameLabel.Text = $"姓名: {p.Name}";
             }
         };
 
-        // Slider 改 → 回写 Person.Age(ListBox 自动刷新)
+        // Slider 改 → 回写 Person.Age + Converter 演示(手动格式化)
         ageSlider.ValueChanged += (s, e) =>
         {
-            ageLabel.Text = $"年龄: {ageSlider.Value:F0}";
             if (listBox.SelectedItem is Person p)
             {
                 p.Age = (int)ageSlider.Value;
+                // Converter 演示:用 DoubleToStringConverter 把 double 格式化
+                var converter = new DoubleToStringConverter("F0");
+                var displayAge = converter.Convert(ageSlider.Value, typeof(string), null)?.ToString();
+                ageLabel.Text = $"年龄: {displayAge}";
             }
         };
 
-        // 默认选中第一个
+        // ComboBox 选择
+        comboBox.SelectionChanged += (s, e) =>
+        {
+            cityLabel.Text = $"城市: {comboBox.SelectedItem}";
+        };
+
+        // 默认选中
         listBox.SelectedIndex = 0;
 
         window.SetContent(grid);
@@ -119,9 +129,6 @@ internal static class Program
     }
 }
 
-/// <summary>
-/// 数据模型:实现 INotifyPropertyChanged,Name/Age 变化时通知绑定。
-/// </summary>
 public sealed class Person : INotifyPropertyChanged
 {
     private string _name = "";
