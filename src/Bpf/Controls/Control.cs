@@ -20,6 +20,8 @@ namespace Bpf.Controls
         private Dictionary<int, List<Delegate>>? _eventHandlers;
         // 样式列表(应用于自身及后代控件)
         internal List<Styling.Style>? _styles;
+        // 数据绑定:key=属性 Id,value=BindingExpression
+        private Dictionary<int, Bpf.Data.BindingExpression>? _bindings;
         private Control? _parent;
         private Control? _logicalRoot;
         private IPlatformWindow? _hostWindow;
@@ -123,6 +125,45 @@ namespace Bpf.Controls
             // M1 简化:直接置为默认值
             SetValue(property, property.DefaultValue);
         }
+
+        // ── 数据绑定 ──────────────────────────────────────────
+
+        /// <summary>
+        /// 在指定属性上挂一个数据绑定。
+        /// 绑定值优先于样式,仅次于本地显式值(SetValue)。
+        /// </summary>
+        public void SetBinding<TValue>(StyledProperty<TValue> property, Bpf.Data.Binding binding)
+        {
+            _bindings ??= new Dictionary<int, Bpf.Data.BindingExpression>();
+
+            // 旧绑定 detach
+            if (_bindings.TryGetValue(property.Id, out var old))
+                old.Detach();
+
+            var expr = new Bpf.Data.BindingExpression(this, property, binding);
+            _bindings[property.Id] = expr;
+            expr.Attach();
+
+            // 触发布局/渲染失效以反映新值
+            if (property.AffectsMeasure) InvalidateMeasure();
+            if (property.AffectsArrange) InvalidateArrange();
+            InvalidateVisual();
+        }
+
+        /// <summary>
+        /// BindingExpression 用:直接写本地值,绕过绑定回查(防递归)。
+        /// </summary>
+        internal void SetValueInternal(BpfProperty property, object? value)
+        {
+            _values ??= new Utilities.PropertyValueStore();
+            _values.SetValue(property, value, out _);
+            if (property.AffectsMeasure) InvalidateMeasure();
+            if (property.AffectsArrange) InvalidateArrange();
+            InvalidateVisual();
+        }
+
+        /// <summary>BindingExpression 用:请求重绘(internal,绕过 protected InvalidateVisual)。</summary>
+        internal void RequestRedraw() => InvalidateVisual();
 
         /// <summary>属性值变更后的副作用处理:触发布局/渲染失效,并调用虚回调。</summary>
         private void OnPropertyValueChanged<TValue>(StyledProperty<TValue> property,

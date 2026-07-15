@@ -1,4 +1,5 @@
 using System;
+using Bpf.Controls.Routing;
 using Bpf.Input;
 using Bpf.Media;
 using Bpf.Platform;
@@ -27,6 +28,23 @@ namespace Bpf.Controls
                 SetValue(TextProperty, v);
                 if (_caretIndex > v.Length) _caretIndex = v.Length;
             }
+        }
+
+        // ── 路由事件:文本变化 ──
+
+        public static readonly RoutedEvent<RoutedEventArgs> TextChangedEvent =
+            RoutedEvent<RoutedEventArgs>.Register<TextBox>(nameof(TextChanged),
+                RoutingStrategies.Bubble);
+
+        public event EventHandler<RoutedEventArgs>? TextChanged
+        {
+            add => AddHandler(TextChangedEvent, value!);
+            remove => RemoveHandler(TextChangedEvent, value!);
+        }
+
+        private void RaiseTextChanged()
+        {
+            RaiseEvent(TextChangedEvent, new RoutedEventArgs());
         }
 
         public static readonly StyledProperty<Brush> ForegroundProperty =
@@ -243,11 +261,13 @@ namespace Bpf.Controls
                 _caretIndex++;
             }
             InvalidateVisual();
+            RaiseTextChanged();
             e.Handled = true;
         }
 
-        protected internal override void OnKeyDown(KeyEventArgs e)
+        protected internal override void OnKeyDown(Bpf.Input.KeyEventArgs e)
         {
+            bool changed = false;
             switch (e.Key)
             {
                 case Key.Backspace:
@@ -256,6 +276,7 @@ namespace Bpf.Controls
                         Text = Text.Remove(_caretIndex - 1, 1);
                         _caretIndex--;
                         InvalidateVisual();
+                        changed = true;
                     }
                     e.Handled = true;
                     break;
@@ -265,6 +286,7 @@ namespace Bpf.Controls
                     {
                         Text = Text.Remove(_caretIndex, 1);
                         InvalidateVisual();
+                        changed = true;
                     }
                     e.Handled = true;
                     break;
@@ -289,6 +311,7 @@ namespace Bpf.Controls
                     e.Handled = true;
                     break;
             }
+            if (changed) RaiseTextChanged();
         }
     }
 }
