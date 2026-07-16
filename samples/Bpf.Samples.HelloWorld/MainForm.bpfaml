@@ -25,7 +25,30 @@
   </StackPanel.Styles>
 
   <!-- 标题:覆盖了 Style 的 Foreground(本地值优先) -->
-  <Label Text="bpf M6 阶段 E:资源 + 样式" FontSize="16" Foreground="{StaticResource AccentBrush}" />
+  <Label Text="bpf M12:新控件演示" FontSize="16" Foreground="{StaticResource AccentBrush}" />
+
+  <!-- M12: TabControl 选项卡(放最前面,排除被挤出可视区) -->
+  <TabControl x:Name="tabControl" Height="120">
+    <StackPanel>
+      <Label Text="选项卡 1 内容" FontSize="13" />
+      <Button Content="标签页1的按钮" Padding="4" />
+    </StackPanel>
+    <StackPanel>
+      <Label Text="选项卡 2 内容" FontSize="13" Foreground="Blue" />
+    </StackPanel>
+  </TabControl>
+
+  <!-- M12: NumericUpDown 数字微调 -->
+  <StackPanel Orientation="Horizontal">
+    <Label Text="数量: " FontSize="13" />
+    <NumericUpDown x:Name="numericUpDown" Value="5" Minimum="0" Maximum="99" ToolTip="点击右侧三角增减" />
+  </StackPanel>
+
+  <!-- M12: TreeView 树形视图(代码填充) -->
+  <TreeView x:Name="treeView" Height="100" />
+
+  <!-- 旧内容(放在新控件之后) -->
+  <Separator />
 
   <!-- {StaticResource} 在属性值里直接引用 -->
   <TextBlock Text="这段灰色文字来自 Style 的 Setter(Foreground=MutedBrush)" />

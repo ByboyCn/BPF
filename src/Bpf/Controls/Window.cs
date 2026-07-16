@@ -22,6 +22,10 @@ namespace Bpf.Controls
         private Control? _lastHoverTarget;
         // 指针捕获:按下时控件可捕获指针,后续 moved/released 都发给捕获者(即使鼠标移出其 Bounds)
         private Control? _capturedControl;
+        // ToolTip 状态
+        private double _toolTipHoverSeconds;
+        private bool _toolTipVisible;
+        private Control? _lastToolTipTarget;
 
         // ── 标题属性 ──
         public static readonly StyledProperty<string> TitleProperty =
@@ -352,12 +356,65 @@ namespace Bpf.Controls
             {
                 ctx.Clear((Background as SolidColorBrush)?.Color ?? Color.White);
                 _rootPanel.Render(ctx);
+                // ToolTip:悬停超时后在顶层绘制(在 rootPanel 之上,不被遮挡)
+                RenderToolTip(ctx);
             }
             finally
             {
                 ctx.Dispose();
             }
             _renderTarget.Present();
+        }
+
+        /// <summary>更新 ToolTip 悬停计时 + 渲染提示气泡(在所有内容之上)。</summary>
+        private void RenderToolTip(Platform.IDrawingContext ctx)
+        {
+            // 计时:若 hover 目标有 ToolTip,累计悬停时间;否则重置
+            var hover = _lastHoverTarget;
+            bool hasTip = hover is not null && !string.IsNullOrEmpty(hover.ToolTip);
+            if (!hasTip || hover != _lastToolTipTarget)
+            {
+                _toolTipHoverSeconds = 0;
+                _toolTipVisible = false;
+                _lastToolTipTarget = hover;
+                if (!hasTip) return;
+            }
+
+            // 累计悬停时间(用上一帧的 tick 近似,假设 ~60fps 即 0.016s/帧)
+            if (!_toolTipVisible)
+            {
+                _toolTipHoverSeconds += 0.016;
+                if (_toolTipHoverSeconds >= 0.5)
+                {
+                    _toolTipVisible = true;
+                }
+                else return;
+            }
+
+            // 绘制提示气泡:在鼠标位置(用 hover 控件左下角附近)画浅黄背景 + 文字
+            var render = Bpf.Application.Application.Current.RenderInterface;
+            string text = hover!.ToolTip!;
+            using var fmt = render.CreateTextFormat("Segoe UI", 12, Bpf.Platform.FontWeight.Normal);
+            var ts = fmt.MeasureText(text);
+            double pad = 4;
+            // 位置:hover 控件的左下角偏下
+            double tx = hover.Bounds.X;
+            double ty = hover.Bounds.Y + hover.Bounds.Height + 2;
+            double bw = ts.Width + pad * 2, bh = ts.Height + pad * 2;
+
+            // 背景(浅黄)
+            var bg = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xE0)).ToPlatform(render);
+            var border = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)).ToPlatform(render);
+            var fg = new SolidColorBrush(Color.Black).ToPlatform(render);
+            try
+            {
+                ctx.PushTranslate(new Vector(0, 0));
+                ctx.FillRectangle(new Rect(tx, ty, bw, bh), bg);
+                ctx.DrawRectangle(new Rect(tx + 0.5, ty + 0.5, bw - 1, bh - 1), border, 1.0);
+                ctx.DrawText(new Point(tx + pad, ty + pad), text, fmt, fg);
+                ctx.PopTransform();
+            }
+            finally { bg.Dispose(); border.Dispose(); fg.Dispose(); }
         }
 
         // ── 自身布局/渲染:Window 自己不参与 measure/arrange,把活全交给根面板 ──

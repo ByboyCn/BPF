@@ -24,7 +24,7 @@ internal static class Program
     private static void RunBpfamlApp()
     {
         var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
-        var window = app.CreateWindow(500, 680);
+        var window = app.CreateWindow(520, 920);
         window.Title = "bpf M10:默认主题库(亮/暗切换)";
 
         // MainForm.Build() 由源生成器从 MainForm.bpfaml 生成,
@@ -47,6 +47,21 @@ internal static class Program
             for (int i = 1; i <= 20; i++)
                 items.Add($"列表项 {i:D2} —— 悬停看高亮,滚动看 ScrollViewer");
             MainForm.myList.ItemsSource = items;
+        }
+
+        // M12:给 TreeView 填充树形数据(文件资源管理器风格)
+        if (MainForm.treeView != null)
+        {
+            var root = new Bpf.Controls.TreeNode { Header = "项目" };
+            var src = root.AddChild("src");
+            src.AddChild("Bpf.cs");
+            src.AddChild("Program.cs");
+            var docs = root.AddChild("docs");
+            docs.AddChild("README.md");
+            docs.AddChild("API.md");
+            root.AddChild("README.md");
+            root.Children[0].IsExpanded = false; // src 默认收起
+            MainForm.treeView.AddRoot(root);
         }
 
         window.SetContent(form);

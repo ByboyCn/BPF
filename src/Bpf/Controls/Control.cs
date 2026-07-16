@@ -409,6 +409,12 @@ namespace Bpf.Controls
         /// <summary>指针(鼠标)当前是否悬停在本控件上。由 Window 在指针移动时维护。</summary>
         public bool IsPointerOver { get; internal set; }
 
+        /// <summary>
+        /// 工具提示文字。鼠标悬停在本控件上约 0.5 秒后,Window 在顶层绘制此文字(气泡)。
+        /// 为空则不显示。可由 .bpfaml 设 ToolTip="..."。
+        /// </summary>
+        public string? ToolTip { get; set; }
+
         /// <summary>指针进入控件边界时调用(由 Window 在 hover 目标变化时触发)。</summary>
         protected internal virtual void OnPointerEntered(PointerEventArgs e) { }
         /// <summary>指针离开控件边界时调用。</summary>
