@@ -370,11 +370,12 @@ namespace Bpf.Controls
             if (Owner is null) return;
             var render = Bpf.Application.Application.Current.RenderInterface;
 
-            // 背景:选中(深蓝)> 悬停(浅蓝)> 默认(白)
+            // 背景:选中(强调色)> 悬停(主题悬停色)> 默认(窗口背景)。颜色从 Theme 读。
+            var theme = Bpf.Theming.Theme.Current;
             Brush bgBrush = _isSelected
                 ? Owner.SelectedBackground
-                : (IsPointerOver ? new SolidColorBrush(Color.FromRgb(0xE6, 0xF0, 0xFF))
-                                 : new SolidColorBrush(Color.White));
+                : (IsPointerOver ? new SolidColorBrush(theme.HoverBackground)
+                                 : new SolidColorBrush(theme.WindowBackground));
             var bg = bgBrush.ToPlatform(render);
             try { context.FillRectangle(new Rect(0, 0, Bounds.Width, Bounds.Height), bg); }
             finally { bg.Dispose(); }

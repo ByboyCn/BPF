@@ -176,17 +176,17 @@ namespace Bpf.Controls
             var border = BorderBrush.ToPlatform(render);
             try
             {
-                // 背景:按下 > 悬停 > 默认(按下最深,悬停略深,提供视觉反馈)
+                // 背景:按下 > 悬停 > 默认。颜色从 Theme 读(支持亮/暗主题切换)。
                 IPlatformBrush bgBrush;
                 bool disposeBg = false;
                 if (_isPressed)
                 {
-                    bgBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0)).ToPlatform(render);
+                    bgBrush = new SolidColorBrush(Bpf.Theming.Theme.Current.PressedBackground).ToPlatform(render);
                     disposeBg = true;
                 }
                 else if (IsPointerOver)
                 {
-                    bgBrush = new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xC8)).ToPlatform(render);
+                    bgBrush = new SolidColorBrush(Bpf.Theming.Theme.Current.HoverBackground).ToPlatform(render);
                     disposeBg = true;
                 }
                 else

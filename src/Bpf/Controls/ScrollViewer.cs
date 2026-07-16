@@ -133,20 +133,19 @@ namespace Bpf.Controls
             if (NeedsScrollBar)
             {
                 var render = Bpf.Application.Application.Current.RenderInterface;
+                var theme = Bpf.Theming.Theme.Current;
                 double barX = Bounds.Width - ScrollBarWidth;
 
-                // 轨道(浅灰背景)
-                var track = new SolidColorBrush(Color.FromRgb(0xF0, 0xF0, 0xF0))
-                    .ToPlatform(render);
+                // 轨道(主题滚动条轨道色)
+                var track = new SolidColorBrush(theme.ScrollBarTrack).ToPlatform(render);
                 try { context.FillRectangle(new Rect(barX, 0, ScrollBarWidth, Bounds.Height), track); }
                 finally { track.Dispose(); }
 
-                // 滑块(深灰)
+                // 滑块(主题滚动条滑块色)
                 double thumbH = Math.Max(20, Bounds.Height * ViewportHeight / _extentHeight);
                 double maxOffset = Math.Max(1, _extentHeight - ViewportHeight);
                 double thumbY = (_verticalOffset / maxOffset) * (Bounds.Height - thumbH);
-                var thumb = new SolidColorBrush(Color.FromRgb(0xC0, 0xC0, 0xC0))
-                    .ToPlatform(render);
+                var thumb = new SolidColorBrush(theme.ScrollBarThumb).ToPlatform(render);
                 try { context.FillRoundedRectangle(new Rect(barX + 2, thumbY, ScrollBarWidth - 4, thumbH), 3, 3, thumb); }
                 finally { thumb.Dispose(); }
             }

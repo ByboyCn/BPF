@@ -165,10 +165,10 @@ namespace Bpf.Controls
         {
             var render = Bpf.Application.Application.Current.RenderInterface;
 
-            // 悬停时方框背景变浅蓝(提供交互反馈)
+            // 悬停时方框背景(主题悬停色,支持亮/暗切换)
             if (IsPointerOver)
             {
-                var hoverBg = new SolidColorBrush(Color.FromRgb(0xD0, 0xE4, 0xFF)).ToPlatform(render);
+                var hoverBg = new SolidColorBrush(Bpf.Theming.Theme.Current.HoverBackground).ToPlatform(render);
                 try { context.FillRectangle(new Rect(0, 0, BoxSize, BoxSize), hoverBg); }
                 finally { hoverBg.Dispose(); }
             }
