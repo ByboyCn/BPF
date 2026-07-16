@@ -6,73 +6,106 @@ using Bpf.PropertySystem;
 namespace Bpf.Controls
 {
     /// <summary>
-    /// 图片控件(M4.1 占位)。
-    /// 真正的图片加载(WIC + D2D1 DrawBitmap)留 M5。
-    /// 当前用纯色矩形渲染占位,不崩溃。
+    /// 图片控件。从文件路径加载 PNG/JPEG/BMP/GIF 并显示(SkiaSharp 解码)。
     /// </summary>
     public sealed class Image : Control
     {
-        /// <summary>图片源(M4.1 未使用,纯占位)。</summary>
-        public object? Source { get; set; }
+        public static readonly StyledProperty<string> SourceProperty =
+            StyledProperty<string>.Register<Image>(nameof(Source), "",
+                affectsMeasure: true, affectsRender: true);
 
-        public static readonly StyledProperty<double> WidthProperty =
-            StyledProperty<double>.Register<Image>(nameof(Width), 64.0,
-                affectsMeasure: true);
-
-        public double Width
+        public string Source
         {
-            get => GetValue(WidthProperty);
-            set => SetValue(WidthProperty, value);
+            get => GetValue(SourceProperty);
+            set
+            {
+                SetValue(SourceProperty, value);
+                _bitmap?.Dispose();
+                _bitmap = null;
+            }
         }
 
-        public static readonly StyledProperty<double> HeightProperty =
-            StyledProperty<double>.Register<Image>(nameof(Height), 64.0,
-                affectsMeasure: true);
+        public static readonly StyledProperty<Stretch> StretchProperty =
+            StyledProperty<Stretch>.Register<Image>(nameof(Stretch),
+                Stretch.Uniform, affectsRender: true);
 
-        public double Height
+        public Stretch Stretch
         {
-            get => GetValue(HeightProperty);
-            set => SetValue(HeightProperty, value);
+            get => GetValue(StretchProperty);
+            set => SetValue(StretchProperty, value);
         }
 
-        public static readonly StyledProperty<Brush> PlaceholderBrushProperty =
-            StyledProperty<Brush>.Register<Image>(nameof(PlaceholderBrush),
-                new SolidColorBrush(Color.FromRgb(0xDD, 0xDD, 0xDD)), affectsRender: true);
+        private IPlatformBitmap? _bitmap;
 
-        public Brush PlaceholderBrush
+        private IPlatformBitmap? EnsureBitmap()
         {
-            get => GetValue(PlaceholderBrushProperty);
-            set => SetValue(PlaceholderBrushProperty, value);
+            if (_bitmap is not null) return _bitmap;
+            if (string.IsNullOrEmpty(Source)) return null;
+            if (HostWindow is null) return null;
+            try
+            {
+                _bitmap = Bpf.Application.Application.Current.RenderInterface.LoadBitmap(Source);
+            }
+            catch { _bitmap = null; }
+            return _bitmap;
         }
 
         protected override Size MeasureCore(Size availableSize)
         {
-            double w = Math.Min(availableSize.Width, Width);
-            double h = Math.Min(availableSize.Height, Height);
-            return new Size(w, h);
+            var bmp = EnsureBitmap();
+            if (bmp is null)
+                return new Size(
+                    Math.Min(availableSize.Width, 64),
+                    Math.Min(availableSize.Height, 64));
+            return new Size(
+                Math.Min(availableSize.Width == double.PositiveInfinity ? bmp.PixelWidth : availableSize.Width, bmp.PixelWidth),
+                Math.Min(availableSize.Height == double.PositiveInfinity ? bmp.PixelHeight : availableSize.Height, bmp.PixelHeight));
         }
 
         protected override void ArrangeCore(Rect finalRect) => Bounds = finalRect;
 
         public override void Render(IDrawingContext context)
         {
-            var render = Bpf.Application.Application.Current.RenderInterface;
-            var brush = PlaceholderBrush.ToPlatform(render);
-            try
+            var bmp = EnsureBitmap();
+            if (bmp is not null)
             {
-                // 占位:纯色矩形 + 对角线(用两条细矩形近似)
-                context.FillRectangle(new Rect(0, 0, Bounds.Width, Bounds.Height), brush);
-                var border = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)).ToPlatform(render);
-                try
-                {
-                    context.DrawRectangle(new Rect(0.5, 0.5, Bounds.Width - 1, Bounds.Height - 1), border, 1.0);
-                }
-                finally { border.Dispose(); }
+                var destRect = ComputeStretchRect(Stretch, bmp.PixelWidth, bmp.PixelHeight,
+                    Bounds.Width, Bounds.Height);
+                context.DrawImage(bmp, destRect);
             }
-            finally { brush.Dispose(); }
+            else
+            {
+                var render = Bpf.Application.Application.Current.RenderInterface;
+                var brush = new SolidColorBrush(Color.FromRgb(0xDD, 0xDD, 0xDD)).ToPlatform(render);
+                try { context.FillRectangle(new Rect(0, 0, Bounds.Width, Bounds.Height), brush); }
+                finally { brush.Dispose(); }
+            }
         }
 
-        public override bool HitTest(Point point) =>
-            IsVisible && Bounds.Contains(point);
+        private static Rect ComputeStretchRect(Stretch stretch, int imgW, int imgH, double destW, double destH)
+        {
+            if (imgW <= 0 || imgH <= 0) return new Rect(0, 0, destW, destH);
+            switch (stretch)
+            {
+                case Stretch.Fill:
+                    return new Rect(0, 0, destW, destH);
+                case Stretch.Uniform:
+                    {
+                        double scale = Math.Min(destW / imgW, destH / imgH);
+                        double w = imgW * scale, h = imgH * scale;
+                        return new Rect((destW - w) / 2, (destH - h) / 2, w, h);
+                    }
+                case Stretch.UniformToFill:
+                    {
+                        double scale = Math.Max(destW / imgW, destH / imgH);
+                        double w = imgW * scale, h = imgH * scale;
+                        return new Rect((destW - w) / 2, (destH - h) / 2, w, h);
+                    }
+                default:
+                    return new Rect(0, 0, Math.Min(imgW, destW), Math.Min(imgH, destH));
+            }
+        }
+
+        public override bool HitTest(Point point) => IsVisible && Bounds.Contains(point);
     }
 }

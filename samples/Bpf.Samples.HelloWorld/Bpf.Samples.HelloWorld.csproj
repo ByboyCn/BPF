@@ -8,9 +8,7 @@
     <AssemblyName>Bpf.Samples.HelloWorld</AssemblyName>
     <!-- 端到端 AOT 验收开关;开发期 run 不需要它,只在 publish 时生效 -->
     <PublishAot>true</PublishAot>
-    <!-- Bpf.Windows 大量使用 COM vtable 委托调用,这些委托 stub 在 full trim 下
-         会被裁剪导致 native 调用崩溃。这里把 Bpf.Windows 程序集作为 trimmer root,
-         保留其全部成员(包括 private COM 委托类型)。 -->
+    <!-- M5:SkiaSharp 替代 COM,不再需要 TrimmerRootAssembly -->
     <TrimMode>full</TrimMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -19,10 +17,14 @@
     <ProjectReference Include="..\..\src\Bpf.Windows\Bpf.Windows.csproj" />
   </ItemGroup>
 
-  <!-- 把 Bpf.Windows 程序集标记为 trimmer root,保留其 COM 委托类型
-       (COM vtable 调用依赖的 [UnmanagedFunctionPointer] 委托 stub 在 full trim 下会被裁剪) -->
+  <!-- 复制测试图片到输出目录 -->
   <ItemGroup>
-    <TrimmerRootAssembly Include="Bpf.Windows" />
+    <None Update="logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="logo.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

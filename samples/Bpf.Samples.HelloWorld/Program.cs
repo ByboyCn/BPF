@@ -52,9 +52,13 @@ internal static class Program
         // 标题
         rightPanel.AddChild(new Label { Text = "M4.1 新功能演示", FontSize = 16 });
 
-        // Image 占位
-        rightPanel.AddChild(new TextBlock { Text = "Image 占位控件:", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)) });
-        rightPanel.AddChild(new Image { Width = 80, Height = 60 });
+        // Image(SkiaSharp 加载 PNG 位图)
+        rightPanel.AddChild(new TextBlock { Text = "Image (PNG):", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)) });
+        rightPanel.AddChild(new Image { Source = "logo.png", Stretch = Stretch.Fill });
+
+        // Image(SVG 矢量图,自研光栅化器)
+        rightPanel.AddChild(new TextBlock { Text = "Image (SVG):", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)) });
+        rightPanel.AddChild(new Image { Source = "logo.svg", Stretch = Stretch.Uniform });
 
         // ComboBox(选择城市)
         var cities = new[] { "北京", "上海", "广州", "深圳", "杭州" };
