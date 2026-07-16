@@ -20,6 +20,8 @@ namespace Bpf.Controls
         private Control _rootPanel;
         // hover 跟踪:派发 PointerMoved 时维护,目标变化时触发 Entered/Exited
         private Control? _lastHoverTarget;
+        // 指针捕获:按下时控件可捕获指针,后续 moved/released 都发给捕获者(即使鼠标移出其 Bounds)
+        private Control? _capturedControl;
 
         // ── 标题属性 ──
         public static readonly StyledProperty<string> TitleProperty =
@@ -181,16 +183,22 @@ namespace Bpf.Controls
         /// </summary>
         private void DispatchPointer(PointerEventArgs e, bool pressed = false, bool moved = false)
         {
-            var target = FindHitTestTarget(_rootPanel, e.Position);
-            if (target is null)
+            // 指针捕获优先:若有控件捕获了指针,moved/released 都发给它(拖动滑块/滚动条时不丢失)
+            Control? target;
+            if (_capturedControl is not null && (moved || !pressed))
             {
-                // 指针移出所有控件:通知上一个 hover 目标离开
-                NotifyHoverExit(null, e);
-                return;
+                target = _capturedControl;
             }
-
-            // hover 目标变化:通知旧目标离开、新目标进入
-            if (moved) NotifyHoverChange(target, e);
+            else
+            {
+                target = FindHitTestTarget(_rootPanel, e.Position);
+                if (target is null)
+                {
+                    NotifyHoverExit(null, e);
+                    return;
+                }
+                if (moved) NotifyHoverChange(target, e);
+            }
 
             // 把窗口坐标转换为 target 本地坐标(减去所有祖先的 Bounds 原点)
             var localPos = ToLocal(target, e.Position);
@@ -198,7 +206,20 @@ namespace Bpf.Controls
 
             if (pressed) target.RaisePointerPressed(e);
             else if (moved) target.RaisePointerMoved(e);
-            else target.RaisePointerReleased(e);
+            else
+            {
+                target.RaisePointerReleased(e);
+                // 释放时清除捕获(保险:即使控件忘了 Release)
+                if (ReferenceEquals(_capturedControl, target)) _capturedControl = null;
+            }
+        }
+
+        /// <summary>由 Control.CapturePointer 调用:设置当前指针捕获者。</summary>
+        internal void SetPointerCapture(Control control) => _capturedControl = control;
+        /// <summary>由 Control.ReleasePointerCapture 调用:清除捕获。</summary>
+        internal void ClearPointerCapture(Control control)
+        {
+            if (ReferenceEquals(_capturedControl, control)) _capturedControl = null;
         }
 
         /// <summary>hover 目标变化:旧目标离开(置 IsPointerOver=false + OnPointerExited)、新目标进入。</summary>

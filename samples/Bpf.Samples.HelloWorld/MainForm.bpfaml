@@ -44,6 +44,32 @@
     <ListBox x:Name="myList" FontSize="13" />
   </ScrollViewer>
 
+  <!-- M11: 新控件演示(Separator/ProgressBar/GroupBox/Expander) -->
+  <Separator />
+
+  <!-- ProgressBar:确定模式(进度 65%) -->
+  <Label Text="ProgressBar(65%):" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+  <ProgressBar x:Name="progressBar" Value="65" Height="14" />
+
+  <!-- GroupBox:带标题分组 -->
+  <GroupBox Header="分组示例" FontSize="13">
+    <StackPanel>
+      <Label Text="组内控件 1" FontSize="13" />
+      <Label Text="组内控件 2" FontSize="13" />
+    </StackPanel>
+  </GroupBox>
+
+  <!-- Expander:可折叠(点击标题展开/收起) -->
+  <Expander Header="可折叠面板(点击展开)">
+    <StackPanel>
+      <Label Text="展开后显示的内容 1" FontSize="13" />
+      <Label Text="展开后显示的内容 2" FontSize="13" />
+      <Button Content="折叠面板内的按钮" Padding="4" />
+    </StackPanel>
+  </Expander>
+
+  <Separator />
+
   <!-- M7: CheckBox 悬停高亮演示 -->
   <CheckBox Content="勾选我(悬停看方框高亮)" FontSize="13" IsChecked="true" />
 

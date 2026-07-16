@@ -139,6 +139,7 @@ namespace Bpf.Controls
         {
             Focus();
             _isDragging = true;
+            CapturePointer();
             UpdateValueFromX(e.Position.X);
             e.Handled = true;
         }
@@ -155,6 +156,7 @@ namespace Bpf.Controls
         public override void OnPointerReleased(PointerEventArgs e)
         {
             _isDragging = false;
+            ReleasePointerCapture();
             e.Handled = true;
         }
 

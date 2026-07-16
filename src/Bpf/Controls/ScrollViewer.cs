@@ -182,6 +182,7 @@ namespace Bpf.Controls
                     _isDraggingThumb = true;
                     _dragStartY = e.Position.Y;
                     _dragStartOffset = _verticalOffset;
+                    CapturePointer(); // 拖拽期间捕获指针
                 }
                 else
                 {
@@ -214,6 +215,7 @@ namespace Bpf.Controls
             if (_isDraggingThumb)
             {
                 _isDraggingThumb = false;
+                ReleasePointerCapture();
                 e.Handled = true;
             }
         }

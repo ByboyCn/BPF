@@ -35,6 +35,22 @@ namespace Bpf.Windows.Platform
             _canvas.DrawRect(ToSKRect(rect), paint);
         }
 
+        public void FillTriangle(Point p1, Point p2, Point p3, IPlatformBrush brush)
+        {
+            using var paint = new SKPaint
+            {
+                Color = GetBrushColor(brush),
+                IsAntialias = true,
+                Style = SKPaintStyle.Fill,
+            };
+            using var path = new SKPath();
+            path.MoveTo((float)p1.X, (float)p1.Y);
+            path.LineTo((float)p2.X, (float)p2.Y);
+            path.LineTo((float)p3.X, (float)p3.Y);
+            path.Close();
+            _canvas.DrawPath(path, paint);
+        }
+
         public void DrawRectangle(Rect rect, IPlatformBrush brush, double strokeWidth)
         {
             using var paint = new SKPaint

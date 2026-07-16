@@ -15,6 +15,11 @@ namespace Bpf.Platform
         /// <summary>用画笔填充矩形。</summary>
         void FillRectangle(Rect rect, IPlatformBrush brush);
 
+        /// <summary>
+        /// 用画笔填充三角形(三个顶点)。用于自绘图标(如展开/收起指示符),避免 Unicode 符号缺字。
+        /// </summary>
+        void FillTriangle(Point p1, Point p2, Point p3, IPlatformBrush brush);
+
         /// <summary>用画笔绘制矩形描边。</summary>
         void DrawRectangle(Rect rect, IPlatformBrush brush, double strokeWidth);
 

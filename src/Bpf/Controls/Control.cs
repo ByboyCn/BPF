@@ -391,6 +391,21 @@ namespace Bpf.Controls
         public virtual void OnPointerReleased(PointerEventArgs e) { }
         public virtual void OnPointerMoved(PointerEventArgs e) { }
 
+        /// <summary>
+        /// 捕获指针:捕获后,后续的 PointerMoved/PointerReleased 都发给本控件(即使鼠标移出 Bounds)。
+        /// 用于拖动场景(滑块、滚动条)。在 OnPointerPressed 里调用,OnPointerReleased 里释放。
+        /// </summary>
+        public void CapturePointer()
+        {
+            (LogicalRoot as Window)?.SetPointerCapture(this);
+        }
+
+        /// <summary>释放指针捕获。</summary>
+        public void ReleasePointerCapture()
+        {
+            (LogicalRoot as Window)?.ClearPointerCapture(this);
+        }
+
         /// <summary>指针(鼠标)当前是否悬停在本控件上。由 Window 在指针移动时维护。</summary>
         public bool IsPointerOver { get; internal set; }
 

@@ -17,6 +17,9 @@ public partial class MainForm
     {
         if (ViewModel != null && mySlider != null)
             ViewModel.Value = (int)mySlider.Value;
+        // M11:滑块值同步到进度条(拖滑块 → 进度条跟随)
+        if (progressBar != null && mySlider != null)
+            progressBar.Value = mySlider.Value;
     }
 
     private static void OnIncrementClick(object sender, RoutedEventArgs e)

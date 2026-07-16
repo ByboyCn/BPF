@@ -29,6 +29,11 @@ namespace Bpf.Markup.Generator.Model
             { "Grid",          "Bpf.Controls.Grid" },
             { "Canvas",        "Bpf.Controls.Canvas" },
             { "DockPanel",     "Bpf.Controls.DockPanel" },
+            // M11 新控件
+            { "Separator",     "Bpf.Controls.Separator" },
+            { "ProgressBar",   "Bpf.Controls.ProgressBar" },
+            { "GroupBox",      "Bpf.Controls.GroupBox" },
+            { "Expander",      "Bpf.Controls.Expander" },
             // Bpf.Media
             { "SolidColorBrush", "Bpf.Media.SolidColorBrush" },
             // M6 特殊元素(非控件,发射器按 LocalName 特殊处理;FullTypeName 仅占位)
@@ -70,6 +75,8 @@ namespace Bpf.Markup.Generator.Model
             { "Bpf.Controls.DockPanel",    ContentStrategy.PanelAddChild },
             { "Bpf.Controls.Border",       ContentStrategy.ChildSingle },
             { "Bpf.Controls.ScrollViewer", ContentStrategy.ChildSingle },
+            { "Bpf.Controls.GroupBox",     ContentStrategy.ChildSingle },
+            { "Bpf.Controls.Expander",     ContentStrategy.ChildSingle },
             { "Bpf.Controls.Button",       ContentStrategy.ContentString },
             { "Bpf.Controls.Label",        ContentStrategy.TextString },
             { "Bpf.Controls.TextBlock",    ContentStrategy.TextString },
