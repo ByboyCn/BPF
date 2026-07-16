@@ -4,4 +4,5 @@
   <Project Path="src/Bpf.Markup.Generator/Bpf.Markup.Generator.csproj" />
   <Project Path="samples/Bpf.Samples.HelloWorld/Bpf.Samples.HelloWorld.csproj" />
   <Project Path="tests/Bpf.Tests/Bpf.Tests.csproj" />
+  <Project Path="tests/Bpf.Markup.Generator.Tests/Bpf.Markup.Generator.Tests.csproj" />
 </Solution>
