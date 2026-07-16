@@ -11,13 +11,34 @@ internal static class Program
 {
     private static void Main()
     {
-        try { RunApp(); }
+        try { RunBpfamlApp(); }
         catch (Exception ex)
         {
             System.Console.Error.WriteLine($"[bpf FATAL] {ex}");
             System.Console.Error.Flush();
             throw;
         }
+    }
+
+    /// <summary>M6:.bpfaml 声明式 UI 入口。MainForm 由源生成器从 MainForm.bpfaml 编译生成。</summary>
+    private static void RunBpfamlApp()
+    {
+        var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
+        var window = app.CreateWindow(480, 360);
+        window.Title = "bpf M6:.bpfaml + 数据绑定";
+
+        // MainForm.Build() 由源生成器从 MainForm.bpfaml 生成,
+        // 构造并返回 .bpfaml 描述的控件树根(StackPanel)。
+        var form = MainForm.Build();
+
+        // 设置 DataContext:ViewModel。子控件通过 {Binding} 沿树继承获取源。
+        var vm = new DemoViewModel();
+        MainForm.ViewModel = vm;
+        form.DataContext = vm;
+
+        window.SetContent(form);
+
+        app.Run();
     }
 
     private static void RunApp()

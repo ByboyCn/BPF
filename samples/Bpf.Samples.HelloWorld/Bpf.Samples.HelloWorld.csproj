@@ -15,6 +15,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Bpf.Windows\Bpf.Windows.csproj" />
+    <!-- M6:.bpfaml 源生成器(仅构建期参与,不作为运行时依赖) -->
+    <ProjectReference Include="..\..\src\Bpf.Markup.Generator\Bpf.Markup.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- M6:.bpfaml 文件作为源生成器输入(AdditionalFiles),不被编译为 C# 也不嵌入资源 -->
+  <ItemGroup>
+    <AdditionalFiles Include="**\*.bpfaml" />
   </ItemGroup>
 
   <!-- 复制测试图片到输出目录 -->

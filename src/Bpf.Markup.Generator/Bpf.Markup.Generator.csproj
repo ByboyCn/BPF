@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      源生成器必须 netstandard2.0:Roslyn 编译器进程以 netstandard2.0 兼容方式加载生成器 DLL,
+      更高的 TFM 可能无法加载。EnforceExtendedAnalyzerRules 强制只使用分析器安全 API。
+    -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- 生成器不产出运行时程序集,只作为分析器被消费 -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <IncludeSymbols>false</IncludeSymbols>
+    <!-- RS2008:分析器发布跟踪建议(需 AnalyzerReleases.Shipped.md);本项目为内置生成器,暂不发布独立版本,关闭此提示 -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 4.11.0 兼容 .NET 10 SDK 的 Roslyn 版本 -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

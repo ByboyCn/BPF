@@ -46,5 +46,17 @@ namespace Bpf.Data
             handler?.Invoke(sender, new PropertyChangedEventArgs(propertyName));
             return true;
         }
+
+        /// <summary>
+        /// 直接触发指定属性的 PropertyChanged 通知(用于派生属性:当依赖的源属性变化时,
+        /// 手动通知依赖它的派生属性)。M6 数据绑定场景常用。
+        /// </summary>
+        public static void RaisePropertyChanged(
+            this INotifyPropertyChanged sender,
+            string propertyName,
+            PropertyChangedEventHandler? handler)
+        {
+            handler?.Invoke(sender, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

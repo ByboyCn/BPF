@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M6 阶段 E 测试:资源字典 + Style + markup extension。
+     - <StackPanel.Resources> 定义命名资源(x:Key)
+     - <StackPanel.Styles> 定义 Style(按 TargetType 匹配后代控件)
+     - {StaticResource Key} 引用资源(编译期解析为直接引用)
+     - {x:Static} 引用静态成员 -->
+<StackPanel x:Class="Bpf.Samples.HelloWorld.MainForm"
+            xmlns="bpf"
+            xmlns:x="bpf:x"
+            x:DataType="Bpf.Samples.HelloWorld.DemoViewModel">
+
+  <!-- 资源字典:命名画刷,后代控件用 {StaticResource} 复用 -->
+  <StackPanel.Resources>
+    <SolidColorBrush x:Key="AccentBrush" Color="#2D7FF9"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#FF4D4F"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#888888"/>
+  </StackPanel.Resources>
+
+  <!-- 样式:所有 TextBlock 默认字号 13、灰色前景 -->
+  <StackPanel.Styles>
+    <Style TargetType="TextBlock">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+    </Style>
+  </StackPanel.Styles>
+
+  <!-- 标题:覆盖了 Style 的 Foreground(本地值优先) -->
+  <Label Text="bpf M6 阶段 E:资源 + 样式" FontSize="16" Foreground="{StaticResource AccentBrush}" />
+
+  <!-- {StaticResource} 在属性值里直接引用 -->
+  <TextBlock Text="这段灰色文字来自 Style 的 Setter(Foreground=MutedBrush)" />
+  <TextBlock Text="这条红色文字用 {StaticResource DangerBrush}" Foreground="{StaticResource DangerBrush}" />
+
+  <!-- {Binding} + {StaticResource} 组合 -->
+  <StackPanel Orientation="Horizontal">
+    <Label Text="Value: " Foreground="{StaticResource AccentBrush}" />
+    <TextBlock Text="{Binding DisplayText}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" />
+  </StackPanel>
+
+  <Slider x:Name="mySlider" Minimum="0" Maximum="100" Value="50" ValueChanged="OnSliderChanged" />
+
+  <Button Content="点击 +1(样式:蓝底白字)" Background="{StaticResource AccentBrush}" Foreground="White" Padding="6"
+          Click="OnIncrementClick" />
+  <TextBlock Text="{Binding CountText}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+</StackPanel>

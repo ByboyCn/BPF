@@ -22,9 +22,15 @@ namespace Bpf.Controls
         internal List<Styling.Style>? _styles;
         // 数据绑定:key=属性 Id,value=BindingExpression
         private Dictionary<int, Bpf.Data.BindingExpression>? _bindings;
+        // 编译式绑定(M6):key=属性 Id,value=CompiledBindingExpression。优先级同 _bindings。
+        private Dictionary<int, Bpf.Data.CompiledBindingExpression>? _compiledBindings;
         private Control? _parent;
         private Control? _logicalRoot;
         private IPlatformWindow? _hostWindow;
+        // DataContext:数据绑定的源。null 时沿祖先链查找(继承)。
+        private object? _dataContext;
+        // 资源字典:key → 任意对象(Brush/Color/Style/...)。{StaticResource Key} 沿祖先链查找。
+        private Dictionary<string, object>? _resources;
 
         /// <summary>逻辑父节点。</summary>
         public Control? Parent
@@ -45,6 +51,118 @@ namespace Bpf.Controls
 
         /// <summary>承载此控件的窗口(null = 未挂到窗口)。</summary>
         public IPlatformWindow? HostWindow => _hostWindow;
+
+        /// <summary>
+        /// 数据上下文:数据绑定的源对象。设置此属性后,本控件及未显式设置 DataContext 的后代控件,
+        /// 其 {Binding} 会以此为源。沿祖先链查找(继承语义,类似 WPF/Avalonia)。
+        /// </summary>
+        public object? DataContext
+        {
+            get => _dataContext;
+            set
+            {
+                if (!ReferenceEquals(_dataContext, value))
+                {
+                    _dataContext = value;
+                    OnDataContextChanged(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 本控件的资源字典(键 → 对象)。{StaticResource Key} 会沿祖先链查找。
+        /// 通常在容器(Window/StackPanel)的 Resources 里放共享的 Brush/Color,
+        /// 后代控件用 {StaticResource Key} 引用,实现外观复用与主题化。
+        /// </summary>
+        public System.Collections.Generic.Dictionary<string, object> Resources
+        {
+            get => _resources ??= new System.Collections.Generic.Dictionary<string, object>();
+        }
+
+        /// <summary>
+        /// 沿祖先链查找资源。找不到返回 false。
+        /// </summary>
+        public bool TryFindResource(string key, out object? resource)
+        {
+            Control? c = this;
+            while (c is not null)
+            {
+                if (c._resources is not null && c._resources.TryGetValue(key, out resource))
+                    return true;
+                c = c._parent;
+            }
+            resource = null;
+            return false;
+        }
+
+        /// <summary>
+        /// 沿祖先链查找资源。找不到抛 KeyNotFoundException。
+        /// </summary>
+        public object FindResource(string key)
+        {
+            if (TryFindResource(key, out var r) && r is not null) return r;
+            throw new System.Collections.Generic.KeyNotFoundException($"未找到资源: {key}");
+        }
+
+        /// <summary>
+        /// 沿祖先链查找有效 DataContext(本控件未设则查父级)。
+        /// </summary>
+        public object? GetEffectiveDataContext()
+        {
+            Control? c = this;
+            while (c is not null)
+            {
+                if (c._dataContext is not null) return c._dataContext;
+                c = c._parent;
+            }
+            return null;
+        }
+
+        /// <summary>DataContext 变更时:通知本控件及后代的编译式绑定重新挂接新源。</summary>
+        private void OnDataContextChanged(object? newDataContext)
+        {
+            // 重新挂接本控件的编译式绑定(用新 DataContext)
+            if (_compiledBindings is not null)
+            {
+                foreach (var kv in _compiledBindings)
+                    kv.Value.Rebind(newDataContext);
+            }
+            // 通知后代(它们的 GetEffectiveDataContext 结果变了)
+            if (this is IPanel panel)
+            {
+                foreach (var child in panel.Children)
+                    child.OnInheritedDataContextChanged();
+            }
+            else
+            {
+                OnInheritedDataContextChangedForNonPanelChildren();
+            }
+        }
+
+        /// <summary>后代被通知祖先 DataContext 变了:若本控件未设自己的 DataContext,重新挂接绑定并向下传。</summary>
+        internal void OnInheritedDataContextChanged()
+        {
+            // 若本控件自己设了 DataContext,继承链在此截断,不再向下传(本控件子树用自己的)
+            if (_dataContext is not null) return;
+
+            if (_compiledBindings is not null)
+            {
+                foreach (var kv in _compiledBindings)
+                    kv.Value.Rebind(GetEffectiveDataContext());
+            }
+            if (this is IPanel panel)
+            {
+                foreach (var child in panel.Children)
+                    child.OnInheritedDataContextChanged();
+            }
+            else
+            {
+                OnInheritedDataContextChangedForNonPanelChildren();
+            }
+        }
+
+        /// <summary>非 Panel 控件重写此方法以通知其逻辑子(如 Border.Child)DataContext 变化。</summary>
+        protected virtual void OnInheritedDataContextChangedForNonPanelChildren() { }
 
         /// <summary>
         /// 应用到此控件及其后代的样式列表。GetValue 查找时,后代会沿祖先链搜索匹配的 Style。
@@ -145,6 +263,28 @@ namespace Bpf.Controls
             expr.Attach();
 
             // 触发布局/渲染失效以反映新值
+            if (property.AffectsMeasure) InvalidateMeasure();
+            if (property.AffectsArrange) InvalidateArrange();
+            InvalidateVisual();
+        }
+
+        /// <summary>
+        /// 在指定属性上挂一个编译式数据绑定(M6)。
+        /// 编译式绑定由源生成器生成 lambda(get/set 访问器),不依赖反射,AOT 完全兼容。
+        /// 源对象取自 GetEffectiveDataContext()(沿祖先链继承)。
+        /// </summary>
+        public void SetCompiledBinding<TValue>(
+            StyledProperty<TValue> property, Bpf.Data.CompiledBinding binding)
+        {
+            _compiledBindings ??= new Dictionary<int, Bpf.Data.CompiledBindingExpression>();
+
+            if (_compiledBindings.TryGetValue(property.Id, out var old))
+                old.Detach();
+
+            var expr = new Bpf.Data.CompiledBindingExpression(this, property, binding);
+            _compiledBindings[property.Id] = expr;
+            expr.Attach(GetEffectiveDataContext());
+
             if (property.AffectsMeasure) InvalidateMeasure();
             if (property.AffectsArrange) InvalidateArrange();
             InvalidateVisual();
