@@ -31,5 +31,8 @@ namespace Bpf.Platform
             double fontSize,
             FontWeight fontWeight = FontWeight.Normal,
             FontStyle fontStyle = FontStyle.Normal);
+
+        /// <summary>从文件路径加载位图(解码 PNG/JPEG/BMP/GIF)。</summary>
+        IPlatformBitmap LoadBitmap(string path);
     }
 }

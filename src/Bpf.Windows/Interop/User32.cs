@@ -206,6 +206,12 @@ namespace Bpf.Windows.Interop
         public static extern int GetDpiForWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
+        public static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [DllImport("user32.dll")]
         public static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
 
         // 鼠标滚轮:WM_MOUSEWHEEL 的 lParam 是屏幕坐标,需转客户区坐标
@@ -231,23 +237,44 @@ namespace Bpf.Windows.Interop
         public static extern uint GetLastError();
     }
 
-    /// <summary>OLE/COM 初始化。所有 COM 图形 API(D2D1/DWrite)都要求
-    /// 主线程已调用 CoInitializeEx。</summary>
-    internal static class Ole32
+    /// <summary>GDI 函数:用于把 SkiaSharp 的像素缓冲 blit 到窗口 HDC。</summary>
+    internal static class Gdi32
     {
-        // COINIT_APARTMENTTHREADED = 0x2; COINIT_MULTITHREADED = 0x0
-        public const uint COINIT_APARTMENTTHREADED = 0x2;
+        [DllImport("gdi32.dll")]
+        public static extern int SetDIBitsToDevice(IntPtr hdc, int xDest, int yDest,
+            int w, int h, int xSrc, int ySrc, int startScan, int scanLines,
+            IntPtr lpvBits, ref BITMAPINFO lpbmi, uint colorUse);
 
-        // RPC_E_CHANGED_MODE = 0x80010106 (已用不同模式初始化,可忽略)
-        public const int RPC_E_CHANGED_MODE = unchecked((int)0x80010106);
+        [StructLayout(LayoutKind.Sequential)]
+        public struct BITMAPINFO
+        {
+            public int biSize;
+            public int biWidth;
+            public int biHeight;
+            public short biPlanes;
+            public short biBitCount;
+            public int biCompression;
+            public int biSizeImage;
+            public int biXPelsPerMeter;
+            public int biYPelsPerMeter;
+            public int biClrUsed;
+            public int biClrImportant;
+        }
 
-        // S_FALSE = 1 (已初始化,正常)
-        public const int S_FALSE = 1;
-
-        [DllImport("ole32.dll")]
-        public static extern int CoInitializeEx(IntPtr pvReserved, uint dwCoInit);
-
-        [DllImport("ole32.dll")]
-        public static extern void CoUninitialize();
+        /// <summary>把 SKBitmap 像素 blit 到 HDC(BGRA 格式,top-down)。</summary>
+        public static void SetDIBitsToDevice(IntPtr hdc, SkiaSharp.SKBitmap bmp, int w, int h)
+        {
+            var bmi = new BITMAPINFO
+            {
+                biSize = 40,
+                biWidth = w,
+                biHeight = -h, // 负值 = top-down
+                biPlanes = 1,
+                biBitCount = 32,
+                biCompression = 0, // BI_RGB
+            };
+            SetDIBitsToDevice(hdc, 0, 0, w, h, 0, 0, 0, h,
+                bmp.GetPixels(), ref bmi, 0);
+        }
     }
 }

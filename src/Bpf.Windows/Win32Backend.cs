@@ -2,35 +2,25 @@ using System;
 using Bpf.Platform;
 using Bpf.Threading;
 using Bpf.Windows.Platform;
-using Bpf.Windows.Render;
 using Bpf.Windows.Threading;
 
 namespace Bpf.Windows
 {
     /// <summary>
-    /// IPlatformBackend 的 Windows 实现。聚合 D2D1/DWrite 工厂、窗口工厂、主循环。
+    /// IPlatformBackend 的 Windows 实现。
+    /// M5:用 SkiaSharp 替代 D2D1/DWrite,不再需要 COM 初始化。
     /// </summary>
     public sealed class Win32Backend : IPlatformBackend
     {
         internal const string HandleTypeHwnd = "HWND";
 
-        private readonly Win32RenderInterface _renderInterface;
+        private readonly SkiaRenderInterface _renderInterface;
         private readonly Win32Dispatcher _dispatcher;
 
         public Win32Backend()
         {
-            // 初始化 COM(单线程公寓)。D2D1/DWrite 必需。
-            // 忽略 RPC_E_CHANGED_MODE(已用其他模式初始化)和 S_FALSE(已初始化)。
-            int hr = Bpf.Windows.Interop.Ole32.CoInitializeEx(
-                IntPtr.Zero, Bpf.Windows.Interop.Ole32.COINIT_APARTMENTTHREADED);
-            if (hr < 0 && hr != Bpf.Windows.Interop.Ole32.RPC_E_CHANGED_MODE)
-            {
-                throw new InvalidOperationException($"CoInitializeEx 失败,hr=0x{hr:X8}");
-            }
-
-            var d2d = new D2D1Factory();
-            var dwrite = new DWriteFactory();
-            _renderInterface = new Win32RenderInterface(d2d, dwrite);
+            // 不再需要 CoInitializeEx(SkiaSharp 不依赖 COM)
+            _renderInterface = new SkiaRenderInterface();
             _dispatcher = new Win32Dispatcher();
         }
 
@@ -55,11 +45,11 @@ namespace Bpf.Windows
     }
 
     /// <summary>
-    /// 应用初始化扩展:在 Program 里调用 <c>Bpf.Application.Application.UseWindows()</c>。
+    /// 应用初始化扩展:在 Program 里调用 <c>Bpf.Windows.WindowsAppExtensions.UseWindows()</c>。
     /// </summary>
     public static class WindowsAppExtensions
     {
-        /// <summary>用 Windows/D2D1 后端初始化应用。</summary>
+        /// <summary>用 Windows/SkiaSharp 后端初始化应用。</summary>
         public static Bpf.Application.Application UseWindows()
         {
             var backend = new Win32Backend();

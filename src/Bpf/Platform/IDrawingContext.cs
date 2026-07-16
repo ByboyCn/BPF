@@ -35,6 +35,9 @@ namespace Bpf.Platform
         /// <summary>测量指定文本格式下、单行文本的自然尺寸。</summary>
         Size MeasureText(string text, IPlatformTextFormat format);
 
+        /// <summary>绘制位图到指定目标矩形(自动缩放)。</summary>
+        void DrawImage(IPlatformBitmap bitmap, Rect destRect);
+
         /// <summary>
         /// 推入裁剪矩形(后续绘制仅在该矩形内可见)。必须与对应 Pop 配对。
         /// </summary>

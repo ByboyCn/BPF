@@ -1,17 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- 纯 P/Invoke + 手写 COM,不需要 -windows 后缀,netstandard2.1 即可跨 SDK 消费 -->
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>Bpf.Windows</RootNamespace>
     <AssemblyName>Bpf.Windows</AssemblyName>
-    <!-- 编码纪律同 Bpf 库 -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Bpf\Bpf.csproj" />
+  </ItemGroup>
+
+  <!-- SkiaSharp:跨平台图形引擎,替代 D2D1/DWrite/WIC -->
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.9" />
   </ItemGroup>
 
 </Project>
