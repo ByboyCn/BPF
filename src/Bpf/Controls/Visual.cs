@@ -34,8 +34,10 @@ namespace Bpf.Controls
             }
         }
 
-        public double Width => Bounds.Width;
-        public double Height => Bounds.Height;
+        /// <summary>实际渲染宽度(Arrange 后的 Bounds.Width)。期望尺寸用 Layoutable.Width。</summary>
+        public double ActualWidth => Bounds.Width;
+        /// <summary>实际渲染高度。期望尺寸用 Layoutable.Height。</summary>
+        public double ActualHeight => Bounds.Height;
         public Size Size => Bounds.Size;
 
         /// <summary>是否可见(不可见时不参与渲染/命中测试)。</summary>
