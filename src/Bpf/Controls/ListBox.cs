@@ -276,9 +276,10 @@ namespace Bpf.Controls
         protected override Size MeasureCore(Size availableSize)
         {
             int count = _itemContainers.Count;
-            double height = count * ItemHeight;
+            double fullHeight = count * ItemHeight;
             double width = availableSize.Width == double.PositiveInfinity ? 150 : availableSize.Width;
-            return new Size(width, height);
+            // M7:报告全部内容高度。外层 ScrollViewer(若有固定 Height)负责裁剪+滚动。
+            return new Size(width, fullHeight);
         }
 
         protected override void ArrangeCore(Rect finalRect)
@@ -369,9 +370,12 @@ namespace Bpf.Controls
             if (Owner is null) return;
             var render = Bpf.Application.Application.Current.RenderInterface;
 
-            // 背景
-            var bg = (_isSelected ? Owner.SelectedBackground : new SolidColorBrush(Color.White))
-                .ToPlatform(render);
+            // 背景:选中(深蓝)> 悬停(浅蓝)> 默认(白)
+            Brush bgBrush = _isSelected
+                ? Owner.SelectedBackground
+                : (IsPointerOver ? new SolidColorBrush(Color.FromRgb(0xE6, 0xF0, 0xFF))
+                                 : new SolidColorBrush(Color.White));
+            var bg = bgBrush.ToPlatform(render);
             try { context.FillRectangle(new Rect(0, 0, Bounds.Width, Bounds.Height), bg); }
             finally { bg.Dispose(); }
 
@@ -385,7 +389,19 @@ namespace Bpf.Controls
             }
         }
 
-        public override void OnPointerPressed(PointerEventArgs e)
+        protected internal override void OnPointerEntered(Bpf.Platform.PointerEventArgs e)
+        {
+            base.OnPointerEntered(e);
+            InvalidateVisual();
+        }
+
+        protected internal override void OnPointerExited(Bpf.Platform.PointerEventArgs e)
+        {
+            base.OnPointerExited(e);
+            InvalidateVisual();
+        }
+
+        public override void OnPointerPressed(Bpf.Platform.PointerEventArgs e)
         {
             Owner?.OnItemClicked(this);
             e.Handled = true;

@@ -40,8 +40,8 @@ namespace Bpf.Markup.Generator.Model
             { "Color",     PropType.Color },      // SolidColorBrush.Color
             // 数字
             { "FontSize",  PropType.Double },
-            { "Width",     PropType.Double },
-            { "Height",    PropType.Double },
+            { "Width",     PropType.Double },   // Layoutable.Width(显式宽度)
+            { "Height",    PropType.Double },   // Layoutable.Height(显式高度)
             { "Padding",   PropType.Double },
             { "BorderThickness", PropType.Double },
             { "CornerRadius",    PropType.Double },

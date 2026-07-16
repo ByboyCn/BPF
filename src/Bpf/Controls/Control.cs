@@ -391,6 +391,14 @@ namespace Bpf.Controls
         public virtual void OnPointerReleased(PointerEventArgs e) { }
         public virtual void OnPointerMoved(PointerEventArgs e) { }
 
+        /// <summary>指针(鼠标)当前是否悬停在本控件上。由 Window 在指针移动时维护。</summary>
+        public bool IsPointerOver { get; internal set; }
+
+        /// <summary>指针进入控件边界时调用(由 Window 在 hover 目标变化时触发)。</summary>
+        protected internal virtual void OnPointerEntered(PointerEventArgs e) { }
+        /// <summary>指针离开控件边界时调用。</summary>
+        protected internal virtual void OnPointerExited(PointerEventArgs e) { }
+
         // ── 输入:键盘(通过路由事件派发) ─────────────────────────────
 
         public static readonly RoutedEvent<KeyEventArgs> KeyDownEvent =
@@ -545,8 +553,11 @@ namespace Bpf.Controls
             switch (e)
             {
                 case KeyEventArgs ke when ReferenceEquals(routedEvent, KeyDownEvent):
+                    // 维护全局修饰键状态(供 PointerPressed 等场景查询)
+                    Bpf.Input.Keyboard.Modifiers = ke.Modifiers;
                     OnKeyDown(ke); break;
                 case KeyEventArgs ke when ReferenceEquals(routedEvent, KeyUpEvent):
+                    Bpf.Input.Keyboard.Modifiers = ke.Modifiers;
                     OnKeyUp(ke); break;
                 case TextEventArgs te when ReferenceEquals(routedEvent, TextInputEvent):
                     OnTextInput(te); break;

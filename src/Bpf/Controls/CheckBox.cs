@@ -165,6 +165,14 @@ namespace Bpf.Controls
         {
             var render = Bpf.Application.Application.Current.RenderInterface;
 
+            // 悬停时方框背景变浅蓝(提供交互反馈)
+            if (IsPointerOver)
+            {
+                var hoverBg = new SolidColorBrush(Color.FromRgb(0xD0, 0xE4, 0xFF)).ToPlatform(render);
+                try { context.FillRectangle(new Rect(0, 0, BoxSize, BoxSize), hoverBg); }
+                finally { hoverBg.Dispose(); }
+            }
+
             // 方框
             var boxRect = new Rect(0, 0, BoxSize, BoxSize);
             var border = CheckMarkBrush.ToPlatform(render);
@@ -174,7 +182,7 @@ namespace Bpf.Controls
             }
             finally { border.Dispose(); }
 
-            // 勾选标记:画一个小填充方块(无 DrawLine,用 FillRectangle 简化)
+            // 勾选标记:画一个小填充方块
             if (IsChecked)
             {
                 var fill = CheckMarkBrush.ToPlatform(render);
@@ -198,6 +206,18 @@ namespace Bpf.Controls
                 }
                 finally { fg.Dispose(); }
             }
+        }
+
+        protected internal override void OnPointerEntered(PointerEventArgs e)
+        {
+            base.OnPointerEntered(e);
+            InvalidateVisual();
+        }
+
+        protected internal override void OnPointerExited(PointerEventArgs e)
+        {
+            base.OnPointerExited(e);
+            InvalidateVisual();
         }
 
         // ── 输入 ──

@@ -18,6 +18,8 @@ namespace Bpf.Controls
         private IRenderTarget? _renderTarget;
         private LayoutManager? _layoutManager;
         private Control _rootPanel;
+        // hover 跟踪:派发 PointerMoved 时维护,目标变化时触发 Entered/Exited
+        private Control? _lastHoverTarget;
 
         // ── 标题属性 ──
         public static readonly StyledProperty<string> TitleProperty =
@@ -180,7 +182,15 @@ namespace Bpf.Controls
         private void DispatchPointer(PointerEventArgs e, bool pressed = false, bool moved = false)
         {
             var target = FindHitTestTarget(_rootPanel, e.Position);
-            if (target is null) return;
+            if (target is null)
+            {
+                // 指针移出所有控件:通知上一个 hover 目标离开
+                NotifyHoverExit(null, e);
+                return;
+            }
+
+            // hover 目标变化:通知旧目标离开、新目标进入
+            if (moved) NotifyHoverChange(target, e);
 
             // 把窗口坐标转换为 target 本地坐标(减去所有祖先的 Bounds 原点)
             var localPos = ToLocal(target, e.Position);
@@ -189,6 +199,36 @@ namespace Bpf.Controls
             if (pressed) target.RaisePointerPressed(e);
             else if (moved) target.RaisePointerMoved(e);
             else target.RaisePointerReleased(e);
+        }
+
+        /// <summary>hover 目标变化:旧目标离开(置 IsPointerOver=false + OnPointerExited)、新目标进入。</summary>
+        private void NotifyHoverChange(Control? newTarget, PointerEventArgs e)
+        {
+            if (ReferenceEquals(newTarget, _lastHoverTarget)) return;
+            // 旧目标离开
+            if (_lastHoverTarget is not null)
+            {
+                _lastHoverTarget.IsPointerOver = false;
+                _lastHoverTarget.OnPointerExited(e);
+            }
+            // 新目标进入
+            if (newTarget is not null)
+            {
+                newTarget.IsPointerOver = true;
+                newTarget.OnPointerEntered(e);
+            }
+            _lastHoverTarget = newTarget;
+        }
+
+        /// <summary>指针完全离开窗口(或无命中目标):通知当前 hover 目标退出。</summary>
+        private void NotifyHoverExit(Control? newTarget, PointerEventArgs e)
+        {
+            if (_lastHoverTarget is not null)
+            {
+                _lastHoverTarget.IsPointerOver = false;
+                _lastHoverTarget.OnPointerExited(e);
+                _lastHoverTarget = null;
+            }
         }
 
         /// <summary>
@@ -276,6 +316,9 @@ namespace Bpf.Controls
         internal void RenderFrame()
         {
             if (_platformWindow is null || _renderTarget is null) return;
+
+            // 推进全局 tick(光标闪烁、动画等)。在布局/渲染前,使失效能在本帧体现。
+            Bpf.Threading.TickRegistry.TickAll();
 
             var size = _platformWindow.ClientSize;
             // M4.1:每帧重排队布局(ExecuteLayout 内部有缓存,仅在尺寸/失效时才真正重算)。

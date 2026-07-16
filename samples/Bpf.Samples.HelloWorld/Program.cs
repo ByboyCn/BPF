@@ -20,12 +20,12 @@ internal static class Program
         }
     }
 
-    /// <summary>M6:.bpfaml 声明式 UI 入口。MainForm 由源生成器从 MainForm.bpfaml 编译生成。</summary>
+    /// <summary>M6/M7:.bpfaml 声明式 UI 入口。MainForm 由源生成器从 MainForm.bpfaml 编译生成。</summary>
     private static void RunBpfamlApp()
     {
         var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
-        var window = app.CreateWindow(480, 360);
-        window.Title = "bpf M6:.bpfaml + 数据绑定";
+        var window = app.CreateWindow(500, 520);
+        window.Title = "bpf M7:控件打磨(光标/选区/悬停/滚动)";
 
         // MainForm.Build() 由源生成器从 MainForm.bpfaml 生成,
         // 构造并返回 .bpfaml 描述的控件树根(StackPanel)。
@@ -35,6 +35,15 @@ internal static class Program
         var vm = new DemoViewModel();
         MainForm.ViewModel = vm;
         form.DataContext = vm;
+
+        // M7:给 ListBox 填充测试数据(20 项,验证 ScrollViewer 滚动 + 项悬停高亮)
+        if (MainForm.myList != null)
+        {
+            var items = new ObservableCollection<string>();
+            for (int i = 1; i <= 20; i++)
+                items.Add($"列表项 {i:D2} —— 悬停看高亮,滚动看 ScrollViewer");
+            MainForm.myList.ItemsSource = items;
+        }
 
         window.SetContent(form);
 

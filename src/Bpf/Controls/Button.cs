@@ -171,23 +171,34 @@ namespace Bpf.Controls
 
         public override void Render(IDrawingContext context)
         {
-            var bg = Background.ToPlatform(
-                Bpf.Application.Application.Current.RenderInterface);
-            var border = BorderBrush.ToPlatform(
-                Bpf.Application.Application.Current.RenderInterface);
+            var render = Bpf.Application.Application.Current.RenderInterface;
+            var bg = Background.ToPlatform(render);
+            var border = BorderBrush.ToPlatform(render);
             try
             {
-                // 背景(按下时换颜色)
-                var bgBrush = _isPressed
-                    ? new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0))
-                        .ToPlatform(Bpf.Application.Application.Current.RenderInterface)
-                    : bg;
+                // 背景:按下 > 悬停 > 默认(按下最深,悬停略深,提供视觉反馈)
+                IPlatformBrush bgBrush;
+                bool disposeBg = false;
+                if (_isPressed)
+                {
+                    bgBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0)).ToPlatform(render);
+                    disposeBg = true;
+                }
+                else if (IsPointerOver)
+                {
+                    bgBrush = new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xC8)).ToPlatform(render);
+                    disposeBg = true;
+                }
+                else
+                {
+                    bgBrush = bg;
+                }
 
                 context.FillRoundedRectangle(
                     new Rect(0.5, 0.5, Bounds.Width - 1, Bounds.Height - 1),
                     3, 3, bgBrush);
 
-                if (_isPressed) bgBrush.Dispose();
+                if (disposeBg) bgBrush.Dispose();
 
                 // 边框
                 context.DrawRoundedRectangle(
@@ -211,6 +222,18 @@ namespace Bpf.Controls
             {
                 context.PopTransform();
             }
+        }
+
+        protected internal override void OnPointerEntered(PointerEventArgs e)
+        {
+            base.OnPointerEntered(e);
+            InvalidateVisual();
+        }
+
+        protected internal override void OnPointerExited(PointerEventArgs e)
+        {
+            base.OnPointerExited(e);
+            InvalidateVisual();
         }
 
         // ── 输入 ──

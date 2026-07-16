@@ -37,6 +37,16 @@
     <TextBlock Text="{Binding DisplayText}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" />
   </StackPanel>
 
+  <!-- M7: ListBox + ScrollViewer 滚动 + 项悬停高亮演示。
+       ScrollViewer 设 Height=150(固定视口),20 项内容(480px)超出 → 出现滚动条。 -->
+  <Label Text="M7: ListBox(悬停高亮 + 滚动)" FontSize="13" Foreground="{StaticResource AccentBrush}" />
+  <ScrollViewer Height="150">
+    <ListBox x:Name="myList" FontSize="13" />
+  </ScrollViewer>
+
+  <!-- M7: CheckBox 悬停高亮演示 -->
+  <CheckBox Content="勾选我(悬停看方框高亮)" FontSize="13" IsChecked="true" />
+
   <Slider x:Name="mySlider" Minimum="0" Maximum="100" Value="50" ValueChanged="OnSliderChanged" />
 
   <Button Content="点击 +1(样式:蓝底白字)" Background="{StaticResource AccentBrush}" Foreground="White" Padding="6"

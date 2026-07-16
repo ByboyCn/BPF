@@ -20,6 +20,45 @@ namespace Bpf.Controls
         private Size? _measureConstraint;
         private bool _measureInvalidated = true;
         private bool _arrangeInvalidated = true;
+        // 显式尺寸(NaN = Auto,未设置)。Measure/Arrange 时作为约束,让控件可固定大小。
+        private double _width = double.NaN;
+        private double _height = double.NaN;
+
+        /// <summary>
+        /// 显式宽度(NaN = Auto,由布局系统决定)。设置后控件在 Measure 时不超过此宽度,
+        /// Arrange 时宽度固定为此值(若父给的空间更大)。
+        /// </summary>
+        public double Width
+        {
+            get => _width;
+            set
+            {
+                if (_width != value)
+                {
+                    _width = value;
+                    InvalidateMeasure();
+                }
+            }
+        }
+
+        /// <summary>显式高度(NaN = Auto)。语义同 <see cref="Width"/>。</summary>
+        public double Height
+        {
+            get => _height;
+            set
+            {
+                if (_height != value)
+                {
+                    _height = value;
+                    InvalidateMeasure();
+                }
+            }
+        }
+
+        /// <summary>Width 是否被显式设置(非 NaN)。</summary>
+        public bool IsWidthSet => !double.IsNaN(_width);
+        /// <summary>Height 是否被显式设置。</summary>
+        public bool IsHeightSet => !double.IsNaN(_height);
 
         /// <summary>
         /// 测量后的期望尺寸。父布局用此值决定子位置。仅在 <see cref="Measure"/> 后有效。
@@ -46,9 +85,18 @@ namespace Bpf.Controls
                 return;
             }
 
+            // 把显式 Width/Height 作为可用空间的上限
+            double availW = IsWidthSet ? Math.Min(availableSize.Width, _width) : availableSize.Width;
+            double availH = IsHeightSet ? Math.Min(availableSize.Height, _height) : availableSize.Height;
+            var effective = new Size(availW, availH);
+
             _measureConstraint = availableSize;
-            var measured = MeasureCore(availableSize);
-            _desiredSize = measured;
+            var measured = MeasureCore(effective);
+
+            // 若显式设置了尺寸,期望尺寸也应尊重它
+            double finalW = IsWidthSet ? _width : measured.Width;
+            double finalH = IsHeightSet ? _height : measured.Height;
+            _desiredSize = new Size(finalW, finalH);
             _measureInvalidated = false;
             // 测量变化必然导致需重新排列
             InvalidateArrange();
