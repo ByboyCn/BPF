@@ -3,38 +3,37 @@ using Bpf.Controls.Routing;
 namespace Bpf.Samples.HelloWorld;
 
 /// <summary>
-/// MainForm 的 code-behind。事件处理通过 ViewModel 间接驱动 UI。
+/// MainForm 的 code-behind。事件处理 + 背景设置。
 /// </summary>
 public partial class MainForm
 {
-    // ViewModel 实例由 Program.cs 创建并设为根控件的 DataContext。
-    internal static DemoViewModel? ViewModel { get; set; }
+    // 当前窗口引用(由 Program.cs 设置,用于改背景)
+    internal static Bpf.Controls.Window? Window { get; set; }
+    private static bool _bgImageOn;
 
-    // M10:主题切换需要重应用,持有根控件引用(Program.cs 设置)
-    internal static Bpf.Controls.Control? Root { get; set; }
+    // 按钮点击:切换文字
+    private static int _clickCount;
+    private static void OnDemoButtonClick(object sender, RoutedEventArgs e)
+    {
+        _clickCount++;
+        if (demoButton != null)
+            demoButton.Content = _clickCount % 2 == 0 ? "点击我" : $"已点击 {_clickCount} 次";
+    }
 
+    // 滑块联动进度条
     private static void OnSliderChanged(object sender, RoutedEventArgs e)
     {
-        if (ViewModel != null && mySlider != null)
-            ViewModel.Value = (int)mySlider.Value;
-        // M11:滑块值同步到进度条(拖滑块 → 进度条跟随)
-        if (progressBar != null && mySlider != null)
-            progressBar.Value = mySlider.Value;
+        if (demoProgress != null && demoSlider != null)
+            demoProgress.Value = demoSlider.Value;
     }
 
-    private static void OnIncrementClick(object sender, RoutedEventArgs e)
+    // 切换背景图片
+    private static void OnBgImageClick(object sender, RoutedEventArgs e)
     {
-        if (ViewModel != null)
-            ViewModel.Count++;
-    }
-
-    // M10:亮/暗主题切换
-    private static void OnThemeToggle(object sender, RoutedEventArgs e)
-    {
-        if (themeButton == null || Root == null) return;
-        bool toDark = Bpf.Theming.Theme.Current == Bpf.Theming.Theme.Light;
-        Bpf.Theming.Theme.Current = toDark ? Bpf.Theming.Theme.Dark : Bpf.Theming.Theme.Light;
-        Bpf.Theming.ThemeApplier.Apply(Root);
-        themeButton.Content = toDark ? "切换到亮色主题" : "切换到暗色主题";
+        if (Window == null) return;
+        _bgImageOn = !_bgImageOn;
+        Window.BackgroundImage = _bgImageOn ? "logo.png" : null;
+        if (bgImageButton != null)
+            bgImageButton.Content = _bgImageOn ? "关闭背景图片" : "切换背景图片";
     }
 }

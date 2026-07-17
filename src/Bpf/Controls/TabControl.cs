@@ -64,6 +64,7 @@ namespace Bpf.Controls
                     if (_selectedIndex >= 0 && _selectedIndex < _pages.Count)
                         _pages[_selectedIndex].Content!.IsVisible = true;
                     InvalidateMeasure();
+                    InvalidateArrange();
                     InvalidateVisual();
                 }
             }
@@ -78,8 +79,13 @@ namespace Bpf.Controls
             set => SetValue(FontSizeProperty, value);
         }
 
+        /// <summary>标签栏位置:Top(顶部横向,默认)或 Left(左侧竖向)。</summary>
+        public Dock TabStripPlacement { get; set; } = Dock.Top;
+
         private const double TabH = 26;
         private const double TabMinW = 60;
+        private const double TabMinH = 26;  // 竖向时每个标签的最小高度
+        private const double TabStripW = 120; // 竖向标签栏宽度
         private const double TabPad = 12;
 
         /// <summary>添加一个页面。</summary>
@@ -97,10 +103,20 @@ namespace Bpf.Controls
             InvalidateMeasure();
         }
 
-        /// <summary>bpfaml 的直接子元素当作页面(标题用序号)。也可在代码里调 AddPage 自定义标题。</summary>
+        /// <summary>bpfaml 的直接子元素当作页面。标题默认 "Tab N",可用 SetPageHeader 修改。</summary>
         public void AddChild(Control child)
         {
             AddPage("Tab " + (_pages.Count + 1), child);
+        }
+
+        /// <summary>设置指定页的标题(用于代码里改 .bpfaml 自动生成的标签名)。</summary>
+        public void SetPageHeader(int index, string header)
+        {
+            if (index >= 0 && index < _pages.Count)
+            {
+                _pages[index].Header = header;
+                InvalidateVisual();
+            }
         }
 
         void IPanel.RemoveChild(Control child)
@@ -148,17 +164,26 @@ namespace Bpf.Controls
         private double MeasureTabWidth(string header, IPlatformTextFormat fmt)
             => Math.Max(TabMinW, fmt.MeasureText(header).Width + TabPad * 2);
 
+        private bool IsVertical => TabStripPlacement == Dock.Left;
+
+        /// <summary>标签栏占的宽度/高度(竖向=TabStripW,横向=TabH)。</summary>
+        private double StripThickness => IsVertical ? TabStripW : TabH;
+
         protected override Size MeasureCore(Size availableSize)
         {
-            double w = availableSize.Width == double.PositiveInfinity ? 200 : availableSize.Width;
-            double h = TabH + 80; // 默认内容高度
+            double w = availableSize.Width == double.PositiveInfinity ? 400 : availableSize.Width;
+            double h = availableSize.Height == double.PositiveInfinity ? 300 : availableSize.Height;
+            // 内容区尺寸
+            double contentW = IsVertical ? Math.Max(0, w - TabStripW) : w;
+            double contentH = IsVertical ? h : Math.Max(0, h - TabH);
+
             if (_selectedIndex >= 0 && _selectedIndex < _pages.Count)
             {
                 var content = _pages[_selectedIndex].Content;
                 if (content is not null && content.IsVisible)
                 {
-                    content.Measure(new Size(w, double.PositiveInfinity));
-                    h = TabH + content.DesiredSize.Height;
+                    content.Measure(new Size(contentW == 0 ? double.PositiveInfinity : contentW,
+                                              contentH == 0 ? double.PositiveInfinity : contentH));
                 }
             }
             return new Size(w, h);
@@ -167,15 +192,25 @@ namespace Bpf.Controls
         protected override void ArrangeCore(Rect finalRect)
         {
             Bounds = finalRect;
-            // 内容区:标签栏下方。给 content 的坐标是相对 TabControl 本地(0, TabH)。
-            // 注意:content 的子会用 content.Bounds 累加,所以这里给的坐标会被继承。
-            // Render 时用 PushTranslate(0, TabH) 移到内容区,content 从本地 (0,0) 画。
-            double contentH = Math.Max(0, finalRect.Height - TabH);
-            var contentRect = new Rect(finalRect.X, finalRect.Y + TabH, finalRect.Width, contentH);
+            double contentW, contentH, contentX, contentY;
+            if (IsVertical)
+            {
+                contentX = finalRect.X + TabStripW;
+                contentY = finalRect.Y;
+                contentW = Math.Max(0, finalRect.Width - TabStripW);
+                contentH = finalRect.Height;
+            }
+            else
+            {
+                contentX = finalRect.X;
+                contentY = finalRect.Y + TabH;
+                contentW = finalRect.Width;
+                contentH = Math.Max(0, finalRect.Height - TabH);
+            }
             if (_selectedIndex >= 0 && _selectedIndex < _pages.Count)
             {
                 var content = _pages[_selectedIndex].Content;
-                content?.Arrange(contentRect);
+                content?.Arrange(new Rect(contentX, contentY, contentW, contentH));
             }
         }
 
@@ -183,110 +218,146 @@ namespace Bpf.Controls
         {
             var render = Bpf.Application.Application.Current.RenderInterface;
             var fmt = EnsureFormat();
+            bool vertical = IsVertical;
 
             // 标签栏背景
             var tabBg = new SolidColorBrush(Bpf.Theming.Theme.Current.WindowBackground).ToPlatform(render);
-            try { context.FillRectangle(new Rect(0, 0, Bounds.Width, TabH), tabBg); }
+            try
+            {
+                if (vertical)
+                    context.FillRectangle(new Rect(0, 0, TabStripW, Bounds.Height), tabBg);
+                else
+                    context.FillRectangle(new Rect(0, 0, Bounds.Width, TabH), tabBg);
+            }
             finally { tabBg.Dispose(); }
 
             // 各标签
-            double x = 0;
-            for (int i = 0; i < _pages.Count; i++)
+            var fg = Foreground.ToPlatform(render);
+            var accent = new SolidColorBrush(Bpf.Theming.Theme.Current.Accent).ToPlatform(render);
+            try
             {
-                var page = _pages[i];
-                double tw = MeasureTabWidth(page.Header, fmt);
-                bool selected = i == _selectedIndex;
-                bool hovered = i == _hoverTab;
-
-                // 标签背景:选中=内容背景色,悬停=浅色,否则透明
-                var bg = selected
-                    ? Background.ToPlatform(render)
-                    : (hovered ? new SolidColorBrush(Bpf.Theming.Theme.Current.HoverBackground).ToPlatform(render) : null);
-                if (bg is not null)
+                if (vertical)
                 {
-                    try { context.FillRectangle(new Rect(x, 0, tw, TabH), bg); }
-                    finally { bg.Dispose(); }
+                    double y = 0;
+                    for (int i = 0; i < _pages.Count; i++)
+                    {
+                        var page = _pages[i];
+                        double th = Math.Max(TabMinH, fmt.MeasureText(page.Header).Height + TabPad);
+                        RenderTabVertical(context, render, fmt, page.Header, 0, y, TabStripW, th, i == _selectedIndex, i == _hoverTab, fg, accent);
+                        y += th;
+                    }
+                    // 标签栏右分隔线
+                    var line = BorderBrush.ToPlatform(render);
+                    try { context.FillRectangle(new Rect(TabStripW, 0, 1, Bounds.Height), line); }
+                    finally { line.Dispose(); }
                 }
-
-                // 标签底边线(选中时用强调色,否则边框色)
-                var accent = new SolidColorBrush(Bpf.Theming.Theme.Current.Accent).ToPlatform(render);
-                var border = BorderBrush.ToPlatform(render);
-                try
+                else
                 {
-                    context.FillRectangle(new Rect(x, TabH - (selected ? 2 : 0), tw, selected ? 2 : 0), accent);
+                    double x = 0;
+                    for (int i = 0; i < _pages.Count; i++)
+                    {
+                        var page = _pages[i];
+                        double tw = MeasureTabWidth(page.Header, fmt);
+                        RenderTabHorizontal(context, render, fmt, page.Header, x, 0, tw, TabH, i == _selectedIndex, i == _hoverTab, fg, accent);
+                        x += tw;
+                    }
+                    // 标签栏底线
+                    var line = BorderBrush.ToPlatform(render);
+                    try { context.FillRectangle(new Rect(0, TabH, Bounds.Width, 1), line); }
+                    finally { line.Dispose(); }
                 }
-                finally { accent.Dispose(); border.Dispose(); }
-
-                // 标签文字
-                var fg = Foreground.ToPlatform(render);
-                try { context.DrawText(new Point(x + TabPad, (TabH - FontSize) / 2.0 - 1), page.Header, fmt, fg); }
-                finally { fg.Dispose(); }
-
-                x += tw;
             }
-
-            // 标签栏底线
-            var line = BorderBrush.ToPlatform(render);
-            try { context.FillRectangle(new Rect(0, TabH, Bounds.Width, 1), line); }
-            finally { line.Dispose(); }
+            finally { fg.Dispose(); accent.Dispose(); }
 
             // 内容区边框
             var cb = BorderBrush.ToPlatform(render);
-            try { context.DrawRectangle(new Rect(0.5, TabH + 0.5, Bounds.Width - 1, Bounds.Height - TabH - 1), cb, 1.0); }
+            try
+            {
+                if (vertical)
+                    context.DrawRectangle(new Rect(TabStripW + 0.5, 0.5, Bounds.Width - TabStripW - 1, Bounds.Height - 1), cb, 1.0);
+                else
+                    context.DrawRectangle(new Rect(0.5, TabH + 0.5, Bounds.Width - 1, Bounds.Height - TabH - 1), cb, 1.0);
+            }
             finally { cb.Dispose(); }
 
-            // 渲染当前页内容:translate 到内容区(标签栏下方),content 从本地 (0,0) 画
+            // 渲染当前页内容
             if (_selectedIndex >= 0 && _selectedIndex < _pages.Count)
             {
                 var content = _pages[_selectedIndex].Content;
                 if (content is not null && content.IsVisible)
                 {
-                    // 内容区起点:(0, TabH) 相对 TabControl 本地坐标
-                    context.PushTranslate(new Vector(0, TabH));
+                    var offset = vertical ? new Vector(TabStripW, 0) : new Vector(0, TabH);
+                    context.PushTranslate(offset);
                     try { content.Render(context); }
                     finally { context.PopTransform(); }
                 }
             }
         }
 
+        private void RenderTabHorizontal(IDrawingContext ctx, IPlatformRenderInterface render,
+            IPlatformTextFormat fmt, string header, double x, double y, double w, double h,
+            bool selected, bool hovered, IPlatformBrush fg, IPlatformBrush accent)
+        {
+            var bg = selected ? Background.ToPlatform(render)
+                    : (hovered ? new SolidColorBrush(Bpf.Theming.Theme.Current.HoverBackground).ToPlatform(render) : null);
+            if (bg is not null) { try { ctx.FillRectangle(new Rect(x, y, w, h), bg); } finally { bg.Dispose(); } }
+            if (selected) ctx.FillRectangle(new Rect(x, h - 2, w, 2), accent);
+            ctx.DrawText(new Point(x + TabPad, (h - FontSize) / 2.0 - 1), header, fmt, fg);
+        }
+
+        private void RenderTabVertical(IDrawingContext ctx, IPlatformRenderInterface render,
+            IPlatformTextFormat fmt, string header, double x, double y, double w, double h,
+            bool selected, bool hovered, IPlatformBrush fg, IPlatformBrush accent)
+        {
+            var bg = selected ? Background.ToPlatform(render)
+                    : (hovered ? new SolidColorBrush(Bpf.Theming.Theme.Current.HoverBackground).ToPlatform(render) : null);
+            if (bg is not null) { try { ctx.FillRectangle(new Rect(x, y, w, h), bg); } finally { bg.Dispose(); } }
+            // 选中:左侧强调色竖线
+            if (selected) ctx.FillRectangle(new Rect(0, y, 3, h), accent);
+            ctx.DrawText(new Point(TabPad, y + (h - FontSize) / 2.0 - 1), header, fmt, fg);
+        }
+
         // ── 输入:点击标签切换 ──
 
         public override void OnPointerPressed(PointerEventArgs e)
         {
-            if (e.Position.Y <= TabH)
-            {
-                var fmt = EnsureFormat();
-                double x = 0;
-                for (int i = 0; i < _pages.Count; i++)
-                {
-                    double tw = MeasureTabWidth(_pages[i].Header, fmt);
-                    if (e.Position.X >= x && e.Position.X < x + tw)
-                    {
-                        SelectedIndex = i;
-                        e.Handled = true;
-                        return;
-                    }
-                    x += tw;
-                }
-            }
+            int idx = HitTestTab(e.Position);
+            if (idx >= 0) { SelectedIndex = idx; e.Handled = true; }
         }
 
         public override void OnPointerMoved(PointerEventArgs e)
         {
-            if (e.Position.Y <= TabH)
+            int idx = HitTestTab(e.Position);
+            if (idx != _hoverTab) { _hoverTab = idx; InvalidateVisual(); }
+        }
+
+        /// <summary>返回坐标所在的标签索引(-1 = 不在标签栏)。</summary>
+        private int HitTestTab(Point pos)
+        {
+            var fmt = EnsureFormat();
+            if (IsVertical)
             {
-                var fmt = EnsureFormat();
+                if (pos.X > TabStripW) return -1;
+                double y = 0;
+                for (int i = 0; i < _pages.Count; i++)
+                {
+                    double th = Math.Max(TabMinH, fmt.MeasureText(_pages[i].Header).Height + TabPad);
+                    if (pos.Y >= y && pos.Y < y + th) return i;
+                    y += th;
+                }
+            }
+            else
+            {
+                if (pos.Y > TabH) return -1;
                 double x = 0;
-                int newHover = -1;
                 for (int i = 0; i < _pages.Count; i++)
                 {
                     double tw = MeasureTabWidth(_pages[i].Header, fmt);
-                    if (e.Position.X >= x && e.Position.X < x + tw) { newHover = i; break; }
+                    if (pos.X >= x && pos.X < x + tw) return i;
                     x += tw;
                 }
-                if (newHover != _hoverTab) { _hoverTab = newHover; InvalidateVisual(); }
             }
-            else if (_hoverTab != -1) { _hoverTab = -1; InvalidateVisual(); }
+            return -1;
         }
 
         public override bool HitTest(Point point)

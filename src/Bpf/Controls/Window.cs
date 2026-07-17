@@ -49,6 +49,13 @@ namespace Bpf.Controls
             set => SetValue(BackgroundProperty, value);
         }
 
+        /// <summary>
+        /// 背景图片文件路径(可选)。设置后,窗口背景先填充 Background 纯色,再绘制此图片(拉伸填充)。
+        /// null = 不画背景图。
+        /// </summary>
+        public string? BackgroundImage { get; set; }
+        private IPlatformBitmap? _bgBitmap;
+
         public Window()
         {
             _rootPanel = new Controls.StackPanel { Orientation = Orientation.Vertical };
@@ -193,6 +200,12 @@ namespace Bpf.Controls
             {
                 target = _capturedControl;
             }
+            else if (pressed && _capturedControl is not null)
+            {
+                // 新按下时清除旧捕获(避免卡住)
+                _capturedControl = null;
+                target = FindHitTestTarget(_rootPanel, e.Position);
+            }
             else
             {
                 target = FindHitTestTarget(_rootPanel, e.Position);
@@ -271,12 +284,14 @@ namespace Bpf.Controls
             // 多子容器(IPanel):遍历 children,RenderOnTop 的优先(在上层)
             if (control is IPanel panel)
             {
-                // 先测 RenderOnTop 的(展开的 ComboBox 等)
+                // 先测 RenderOnTop 的(展开的 ComboBox/Menu 等,下拉可能超出 Bounds)
                 for (int i = panel.Children.Count - 1; i >= 0; i--)
                 {
                     var child = panel.Children[i];
+                    if (!child.IsVisible) continue;
                     if (!child.RenderOnTop) continue;
-                    if (!child.Bounds.Contains(point)) continue;
+                    // RenderOnTop 控件用 HitTestExtended 判断(可能下拉区域超出 Bounds)
+                    if (!child.HitTestExtended(point)) continue;
                     var hit = FindHitTestTarget(child, point);
                     if (hit is not null) return hit;
                     return child;
@@ -285,6 +300,7 @@ namespace Bpf.Controls
                 for (int i = panel.Children.Count - 1; i >= 0; i--)
                 {
                     var child = panel.Children[i];
+                    if (!child.IsVisible) continue;        // 跳过隐藏的
                     if (child.RenderOnTop) continue;
                     if (!child.Bounds.Contains(point)) continue;
                     var hit = FindHitTestTarget(child, point);
@@ -355,6 +371,17 @@ namespace Bpf.Controls
             try
             {
                 ctx.Clear((Background as SolidColorBrush)?.Color ?? Color.White);
+                // 背景图片(拉伸填充整个客户区)
+                if (BackgroundImage is not null)
+                {
+                    if (_bgBitmap is null)
+                    {
+                        try { _bgBitmap = Bpf.Application.Application.Current.RenderInterface.LoadBitmap(BackgroundImage); }
+                        catch { _bgBitmap = null; }
+                    }
+                    if (_bgBitmap is not null)
+                        ctx.DrawImage(_bgBitmap, new Rect(0, 0, size.Width, size.Height));
+                }
                 _rootPanel.Render(ctx);
                 // ToolTip:悬停超时后在顶层绘制(在 rootPanel 之上,不被遮挡)
                 RenderToolTip(ctx);

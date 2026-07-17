@@ -261,7 +261,35 @@ namespace Bpf.Controls
             if (_hoverHeader != -1) { _hoverHeader = -1; InvalidateVisual(); }
         }
 
-        public override bool HitTest(Point point) => IsVisible && Bounds.Contains(point);
+        public override bool HitTest(Point point)
+        {
+            if (!IsVisible || !Bounds.Contains(point)) return false;
+            // 下拉打开时,把本地坐标转换检查:point 是窗口坐标,转成本地
+            // 但 HitTest 收到的是窗口坐标,Bounds 也在窗口坐标。
+            return true;
+        }
+
+        /// <summary>
+        /// RenderOnTop 时的扩展命中测试:下拉打开时,下拉区域(超出 Bounds)也算命中。
+        /// 由 Window.FindHitTestTarget 在 RenderOnTop 分支调用(传窗口坐标)。
+        /// </summary>
+        public override bool HitTestExtended(Point windowPoint)
+        {
+            if (!IsVisible) return false;
+            // 菜单栏本身
+            if (Bounds.Contains(windowPoint)) return true;
+            // 下拉区域(打开时)
+            if (_openIndex >= 0)
+            {
+                double dropH = _headers[_openIndex].Items.Count * ItemH;
+                var fmt = EnsureFormat();
+                double dropX = Bounds.X + GetHeaderX(fmt, _openIndex);
+                double dropW = ComputeDropdownWidth(fmt, _headers[_openIndex]);
+                var dropRect = new Rect(dropX, Bounds.Y + MenuH, dropW, dropH);
+                if (dropRect.Contains(windowPoint)) return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>菜单头(如"文件"),含子菜单项列表。</summary>

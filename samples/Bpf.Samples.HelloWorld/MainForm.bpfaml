@@ -1,126 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- M6 阶段 E 测试:资源字典 + Style + markup extension。
-     - <StackPanel.Resources> 定义命名资源(x:Key)
-     - <StackPanel.Styles> 定义 Style(按 TargetType 匹配后代控件)
-     - {StaticResource Key} 引用资源(编译期解析为直接引用)
-     - {x:Static} 引用静态成员 -->
+<!-- bpf 控件库完整演示:顶部菜单 + 竖向分页 + 底部背景设置 -->
 <StackPanel x:Class="Bpf.Samples.HelloWorld.MainForm"
             xmlns="bpf"
-            xmlns:x="bpf:x"
-            x:DataType="Bpf.Samples.HelloWorld.DemoViewModel">
+            xmlns:x="bpf:x">
 
-  <!-- 资源字典:命名画刷,后代控件用 {StaticResource} 复用 -->
-  <StackPanel.Resources>
-    <SolidColorBrush x:Key="AccentBrush" Color="#2D7FF9"/>
-    <SolidColorBrush x:Key="DangerBrush" Color="#FF4D4F"/>
-    <SolidColorBrush x:Key="MutedBrush" Color="#888888"/>
-  </StackPanel.Resources>
-
-  <!-- 样式:所有 TextBlock 默认字号 13、灰色前景 -->
-  <StackPanel.Styles>
-    <Style TargetType="TextBlock">
-      <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
-    </Style>
-  </StackPanel.Styles>
-
-  <!-- 标题:覆盖了 Style 的 Foreground(本地值优先) -->
-  <Label Text="bpf M12:新控件演示" FontSize="16" Foreground="{StaticResource AccentBrush}" />
-
-  <!-- M12: TabControl 选项卡(放最前面,排除被挤出可视区) -->
-  <TabControl x:Name="tabControl" Height="120">
-    <StackPanel>
-      <Label Text="选项卡 1 内容" FontSize="13" />
-      <Button Content="标签页1的按钮" Padding="4" />
-    </StackPanel>
-    <StackPanel>
-      <Label Text="选项卡 2 内容" FontSize="13" Foreground="Blue" />
-    </StackPanel>
-  </TabControl>
-
-  <!-- M12: NumericUpDown 数字微调 -->
-  <StackPanel Orientation="Horizontal">
-    <Label Text="数量: " FontSize="13" />
-    <NumericUpDown x:Name="numericUpDown" Value="5" Minimum="0" Maximum="99" ToolTip="点击右侧三角增减" />
-  </StackPanel>
-
-  <!-- M12: TreeView 树形视图(代码填充) -->
-  <TreeView x:Name="treeView" Height="100" />
-
-  <!-- M13: PasswordBox 密码框 -->
-  <StackPanel Orientation="Horizontal">
-    <Label Text="密码: " FontSize="13" />
-    <PasswordBox x:Name="passwordBox" ToolTip="输入密码(显示为圆点)" />
-  </StackPanel>
-
-  <!-- M13: ColorPicker 颜色选择器 -->
-  <StackPanel Orientation="Horizontal">
-    <Label Text="颜色: " FontSize="13" />
-    <ColorPicker x:Name="colorPicker" ToolTip="点击选择颜色" />
-  </StackPanel>
-
-  <!-- M13: Menu 菜单栏(代码填充) -->
+  <!-- 顶部菜单栏(顶层,下拉浮在内容之上) -->
   <Menu x:Name="menuBar" />
 
-  <!-- M13: DataGrid 数据表格(代码填充) -->
-  <Label Text="DataGrid(点击行选中):" FontSize="12" Foreground="{StaticResource MutedBrush}" />
-  <DataGrid x:Name="dataGrid" Height="120" />
+  <!-- 主内容:竖向分页 TabControl(固定高度,留出底部设置区空间) -->
+  <TabControl x:Name="tabControl" Height="420">
 
-  <!-- 旧内容(放在新控件之后) -->
-  <Separator />
-
-  <!-- {StaticResource} 在属性值里直接引用 -->
-  <TextBlock Text="这段灰色文字来自 Style 的 Setter(Foreground=MutedBrush)" />
-  <TextBlock Text="这条红色文字用 {StaticResource DangerBrush}" Foreground="{StaticResource DangerBrush}" />
-
-  <!-- {Binding} + {StaticResource} 组合 -->
-  <StackPanel Orientation="Horizontal">
-    <Label Text="Value: " Foreground="{StaticResource AccentBrush}" />
-    <TextBlock Text="{Binding DisplayText}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" />
-  </StackPanel>
-
-  <!-- M7: ListBox + ScrollViewer 滚动 + 项悬停高亮演示。
-       ScrollViewer 设 Height=150(固定视口),20 项内容(480px)超出 → 出现滚动条。 -->
-  <Label Text="M7: ListBox(悬停高亮 + 滚动)" FontSize="13" Foreground="{StaticResource AccentBrush}" />
-  <ScrollViewer Height="150">
-    <ListBox x:Name="myList" FontSize="13" />
-  </ScrollViewer>
-
-  <!-- M11: 新控件演示(Separator/ProgressBar/GroupBox/Expander) -->
-  <Separator />
-
-  <!-- ProgressBar:确定模式(进度 65%) -->
-  <Label Text="ProgressBar(65%):" FontSize="12" Foreground="{StaticResource MutedBrush}" />
-  <ProgressBar x:Name="progressBar" Value="65" Height="14" />
-
-  <!-- GroupBox:带标题分组 -->
-  <GroupBox Header="分组示例" FontSize="13">
+    <!-- 页1:基础控件 -->
     <StackPanel>
-      <Label Text="组内控件 1" FontSize="13" />
-      <Label Text="组内控件 2" FontSize="13" />
+      <Label Text="基础控件" FontSize="16" Foreground="#2D7FF9" />
+      <Button x:Name="demoButton" Content="点击我" Padding="8" Click="OnDemoButtonClick" />
+      <TextBlock Text="TextBlock 文字" FontSize="13" />
+      <TextBox Text="可编辑文本" FontSize="13" />
+      <PasswordBox ToolTip="密码框(输入显示圆点)" />
+      <Label Text="标签 Label" FontSize="13" />
     </StackPanel>
-  </GroupBox>
 
-  <!-- Expander:可折叠(点击标题展开/收起) -->
-  <Expander Header="可折叠面板(点击展开)">
+    <!-- 页2:选择控件 -->
     <StackPanel>
-      <Label Text="展开后显示的内容 1" FontSize="13" />
-      <Label Text="展开后显示的内容 2" FontSize="13" />
-      <Button Content="折叠面板内的按钮" Padding="4" />
+      <Label Text="选择控件" FontSize="16" Foreground="#2D7FF9" />
+      <CheckBox Content="复选框 A" IsChecked="true" FontSize="13" />
+      <CheckBox Content="复选框 B" FontSize="13" />
+      <RadioButton Content="单选 1(互斥)" FontSize="13" IsChecked="true" />
+      <RadioButton Content="单选 2(互斥)" FontSize="13" />
+      <Label Text="ComboBox:" FontSize="12" Foreground="#888888" />
+      <ComboBox x:Name="demoComboBox" FontSize="13" />
     </StackPanel>
-  </Expander>
 
+    <!-- 页3:数值控件 -->
+    <StackPanel>
+      <Label Text="数值控件" FontSize="16" Foreground="#2D7FF9" />
+      <Label Text="Slider(拖动联动进度条):" FontSize="12" Foreground="#888888" />
+      <Slider x:Name="demoSlider" Minimum="0" Maximum="100" Value="40" ValueChanged="OnSliderChanged" />
+      <Label Text="ProgressBar:" FontSize="12" Foreground="#888888" />
+      <ProgressBar x:Name="demoProgress" Value="40" Height="14" />
+      <Label Text="NumericUpDown:" FontSize="12" Foreground="#888888" />
+      <NumericUpDown x:Name="demoNumeric" Value="5" Minimum="0" Maximum="99" />
+    </StackPanel>
+
+    <!-- 页4:列表/树/表格 -->
+    <StackPanel>
+      <Label Text="列表 / 树 / 表格" FontSize="16" Foreground="#2D7FF9" />
+      <Label Text="TreeView:" FontSize="12" Foreground="#888888" />
+      <TreeView x:Name="treeView" Height="80" />
+      <Label Text="DataGrid:" FontSize="12" Foreground="#888888" />
+      <DataGrid x:Name="dataGrid" Height="100" />
+    </StackPanel>
+
+    <!-- 页5:容器 -->
+    <StackPanel>
+      <Label Text="容器控件" FontSize="16" Foreground="#2D7FF9" />
+      <GroupBox Header="分组框" FontSize="13">
+        <StackPanel>
+          <Label Text="组内控件" FontSize="13" />
+        </StackPanel>
+      </GroupBox>
+      <Expander Header="折叠面板(点击展开)" FontSize="13">
+        <StackPanel>
+          <Label Text="展开内容 1" FontSize="13" />
+          <Label Text="展开内容 2" FontSize="13" />
+        </StackPanel>
+      </Expander>
+      <Separator />
+      <Label Text="Separator 分隔线上方" FontSize="12" Foreground="#888888" />
+      <Label Text="Separator 分隔线下方" FontSize="12" Foreground="#888888" />
+    </StackPanel>
+
+    <!-- 页6:图片 -->
+    <StackPanel>
+      <Label Text="图片" FontSize="16" Foreground="#2D7FF9" />
+      <Label Text="PNG:" FontSize="12" Foreground="#888888" />
+      <Image Source="logo.png" Stretch="Fill" />
+      <Label Text="SVG(矢量):" FontSize="12" Foreground="#888888" />
+      <Image Source="logo.svg" Stretch="Uniform" />
+    </StackPanel>
+
+  </TabControl>
+
+  <!-- 底部:背景设置。ColorPicker 直接作为根 StackPanel 的子(不嵌套横向 StackPanel),
+       这样 RenderOnTop + HitTestExtended 能在根层级正确命中调色板弹出区域。 -->
   <Separator />
+  <ColorPicker x:Name="bgColorPicker" ToolTip="选择窗口背景颜色" />
+  <Button x:Name="bgImageButton" Content="切换背景图片" Padding="6" Click="OnBgImageClick" />
 
-  <!-- M7: CheckBox 悬停高亮演示 -->
-  <CheckBox Content="勾选我(悬停看方框高亮)" FontSize="13" IsChecked="true" />
-
-  <Slider x:Name="mySlider" Minimum="0" Maximum="100" Value="50" ValueChanged="OnSliderChanged" />
-
-  <Button Content="点击 +1(样式:蓝底白字)" Background="{StaticResource AccentBrush}" Foreground="White" Padding="6"
-          Click="OnIncrementClick" />
-
-  <!-- M10:主题切换按钮(亮/暗) -->
-  <Button x:Name="themeButton" Content="切换到暗色主题" Padding="6" Click="OnThemeToggle" />
-  <TextBlock Text="{Binding CountText}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
 </StackPanel>

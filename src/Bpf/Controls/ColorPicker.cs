@@ -184,5 +184,21 @@ namespace Bpf.Controls
         }
 
         public override bool HitTest(Point point) => IsVisible && Bounds.Contains(point);
+
+        /// <summary>扩展命中:调色板打开时,下拉区域也算命中。</summary>
+        public override bool HitTestExtended(Point windowPoint)
+        {
+            if (!IsVisible) return false;
+            if (Bounds.Contains(windowPoint)) return true;
+            if (_isOpen)
+            {
+                int rows = (Palette.Length + PaletteCols - 1) / PaletteCols;
+                double palW = PaletteCols * (SwatchSize + SwatchGap) + SwatchGap;
+                double palH = rows * (SwatchSize + SwatchGap) + SwatchGap;
+                var palRect = new Rect(Bounds.X, Bounds.Y + BoxH + 2, palW, palH);
+                if (palRect.Contains(windowPoint)) return true;
+            }
+            return false;
+        }
     }
 }

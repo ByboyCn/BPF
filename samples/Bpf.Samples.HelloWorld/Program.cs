@@ -20,82 +20,86 @@ internal static class Program
         }
     }
 
-    /// <summary>M6/M7/M10:.bpfaml 声明式 UI + 默认主题库演示。</summary>
+    /// <summary>控件库完整演示:顶部菜单 + 竖向分页 + 背景设置。</summary>
     private static void RunBpfamlApp()
     {
         var app = Bpf.Windows.WindowsAppExtensions.UseWindows();
-        var window = app.CreateWindow(520, 920);
-        window.Title = "bpf M10:默认主题库(亮/暗切换)";
+        var window = app.CreateWindow(760, 560);
+        window.Title = "bpf 控件库完整演示";
+        MainForm.Window = window;
 
-        // MainForm.Build() 由源生成器从 MainForm.bpfaml 生成,
-        // 构造并返回 .bpfaml 描述的控件树根(StackPanel)。
+        // MainForm.Build() 返回 StackPanel 根(Menu + TabControl + 底部设置)
         var form = MainForm.Build();
 
-        // M10:应用默认浅色主题(覆盖各控件属性默认值)
-        Bpf.Theming.ThemeApplier.Apply(form);
-
-        // 设置 DataContext:ViewModel。子控件通过 {Binding} 沿树继承获取源。
-        var vm = new DemoViewModel();
-        MainForm.ViewModel = vm;
-        MainForm.Root = form;  // M10:供主题切换按钮重应用
-        form.DataContext = vm;
-
-        // M7:给 ListBox 填充测试数据
-        if (MainForm.myList != null)
+        // TabControl 竖向标签
+        if (MainForm.tabControl != null)
         {
-            var items = new ObservableCollection<string>();
-            for (int i = 1; i <= 20; i++)
-                items.Add($"列表项 {i:D2} —— 悬停看高亮,滚动看 ScrollViewer");
-            MainForm.myList.ItemsSource = items;
+            MainForm.tabControl.TabStripPlacement = Bpf.Controls.Dock.Left;
+            MainForm.tabControl.SetPageHeader(0, "基础");
+            MainForm.tabControl.SetPageHeader(1, "选择");
+            MainForm.tabControl.SetPageHeader(2, "数值");
+            MainForm.tabControl.SetPageHeader(3, "列表/树/表");
+            MainForm.tabControl.SetPageHeader(4, "容器");
+            MainForm.tabControl.SetPageHeader(5, "图片");
         }
 
-        // M12:给 TreeView 填充树形数据(文件资源管理器风格)
+        // 应用浅色主题
+        Bpf.Theming.ThemeApplier.Apply(form);
+
+        // 填充 Menu
+        if (MainForm.menuBar != null)
+        {
+            var file = MainForm.menuBar.AddMenu("文件");
+            file.AddItem("新建");
+            file.AddItem("打开");
+            file.AddItem("退出");
+            var help = MainForm.menuBar.AddMenu("帮助");
+            help.AddItem("关于 bpf");
+        }
+
+        // 填充 ComboBox
+        if (MainForm.demoComboBox != null)
+        {
+            MainForm.demoComboBox.ItemsSource = new[] { "北京", "上海", "广州", "深圳", "杭州" };
+        }
+
+        // 填充 TreeView
         if (MainForm.treeView != null)
         {
             var root = new Bpf.Controls.TreeNode { Header = "项目" };
             var src = root.AddChild("src");
-            src.AddChild("Bpf.cs");
             src.AddChild("Program.cs");
+            src.AddChild("MainForm.bpfaml");
             var docs = root.AddChild("docs");
             docs.AddChild("README.md");
-            docs.AddChild("API.md");
-            root.AddChild("README.md");
-            root.Children[0].IsExpanded = false; // src 默认收起
+            root.AddChild("logo.svg");
             MainForm.treeView.AddRoot(root);
         }
 
-        // M13:给 Menu 填充菜单项
-        if (MainForm.menuBar != null)
-        {
-            var file = MainForm.menuBar.AddMenu("文件");
-            file.AddItem("新建").Click += (s, e) => System.Console.WriteLine("[Menu] 新建");
-            file.AddItem("打开").Click += (s, e) => System.Console.WriteLine("[Menu] 打开");
-            file.AddItem("保存").Click += (s, e) => System.Console.WriteLine("[Menu] 保存");
-            var edit = MainForm.menuBar.AddMenu("编辑");
-            edit.AddItem("撤销").Click += (s, e) => System.Console.WriteLine("[Menu] 撤销");
-            edit.AddItem("重做").Click += (s, e) => System.Console.WriteLine("[Menu] 重做");
-            var help = MainForm.menuBar.AddMenu("帮助");
-            help.AddItem("关于").Click += (s, e) => System.Console.WriteLine("[Menu] 关于");
-        }
-
-        // M13:给 DataGrid 填充数据
+        // 填充 DataGrid
         if (MainForm.dataGrid != null)
         {
-            MainForm.dataGrid.AddColumn("姓名", 100);
-            MainForm.dataGrid.AddColumn("年龄", 60);
+            MainForm.dataGrid.AddColumn("姓名", 80);
+            MainForm.dataGrid.AddColumn("年龄", 50);
             MainForm.dataGrid.AddColumn("城市", 0);
             MainForm.dataGrid.SetRows(new[]
             {
                 new[] { "张三", "25", "北京" },
                 new[] { "李四", "30", "上海" },
                 new[] { "王五", "28", "广州" },
-                new[] { "赵六", "35", "深圳" },
-                new[] { "钱七", "22", "杭州" },
             });
         }
 
-        window.SetContent(form);
+        // 背景颜色选择器:选颜色改窗口背景
+        if (MainForm.bgColorPicker != null)
+        {
+            MainForm.bgColorPicker.ColorChanged += (s, e) =>
+            {
+                window.Background = new Bpf.Media.SolidColorBrush(MainForm.bgColorPicker.SelectedColor);
+            };
+        }
 
+        window.SetContent(form);
         app.Run();
     }
 

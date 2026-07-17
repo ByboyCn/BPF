@@ -116,40 +116,55 @@ namespace Bpf.Controls
 
         private void UncheckOthersInGroup()
         {
-            if (string.IsNullOrEmpty(GroupName)) return;
-            // 从逻辑根开始遍历找同组的 RadioButton
-            var root = LogicalRoot ?? this;
-            foreach (var rb in FindSameGroup(root))
+            // GroupName 非空:同 GroupName 的互斥。
+            // GroupName 为空:同父级的 RadioButton 互斥(默认行为,类似 WPF)。
+            if (!string.IsNullOrEmpty(GroupName))
             {
-                if (!ReferenceEquals(rb, this) && rb.IsChecked)
+                var root = LogicalRoot ?? this;
+                foreach (var rb in FindSameGroup(root, GroupName))
                 {
-                    rb.SetValue(IsCheckedProperty, false); // 直接 SetValue 避免递归
-                    rb.RaiseEvent(UncheckedEvent, new RoutedEventArgs());
+                    if (!ReferenceEquals(rb, this) && rb.IsChecked)
+                    {
+                        rb.SetValue(IsCheckedProperty, false);
+                        rb.RaiseEvent(UncheckedEvent, new RoutedEventArgs());
+                    }
+                }
+            }
+            else
+            {
+                // 同父级互斥
+                if (Parent is IPanel panel)
+                {
+                    foreach (var child in panel.Children)
+                    {
+                        if (child is RadioButton rb && !ReferenceEquals(rb, this) &&
+                            string.IsNullOrEmpty(rb.GroupName) && rb.IsChecked)
+                        {
+                            rb.SetValue(IsCheckedProperty, false);
+                            rb.RaiseEvent(UncheckedEvent, new RoutedEventArgs());
+                        }
+                    }
                 }
             }
         }
 
-        private static List<RadioButton> FindSameGroup(Control root)
+        private static List<RadioButton> FindSameGroup(Control root, string groupName)
         {
             var result = new List<RadioButton>();
-            Collect(root, result);
+            Collect(root, result, groupName);
             return result;
         }
 
-        private static void Collect(Control c, List<RadioButton> result)
+        private static void Collect(Control c, List<RadioButton> result, string groupName)
         {
-            if (c is RadioButton rb && rb.GroupName == rb.GroupName)
-            {
-                // 注意:GroupName 在嵌套 lambda 中需要从外层捕获,这里简化为全局遍历时比较
-            }
-            if (c is RadioButton target && !string.IsNullOrEmpty(target.GroupName))
+            if (c is RadioButton target && target.GroupName == groupName)
             {
                 result.Add(target);
             }
             if (c is IPanel panel)
             {
                 foreach (var child in panel.Children)
-                    Collect(child, result);
+                    Collect(child, result, groupName);
             }
         }
 

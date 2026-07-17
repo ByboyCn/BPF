@@ -387,6 +387,13 @@ namespace Bpf.Controls
         public virtual bool HitTest(Point point) =>
             IsVisible && Bounds.Contains(point);
 
+        /// <summary>
+        /// 扩展命中测试:用于 RenderOnTop 控件(弹出下拉/调色板可能超出 Bounds)。
+        /// 默认同 HitTest。控件重写以接受超出 Bounds 的弹出区域。
+        /// point 是窗口坐标。
+        /// </summary>
+        public virtual bool HitTestExtended(Point point) => HitTest(point);
+
         public virtual void OnPointerPressed(PointerEventArgs e) { }
         public virtual void OnPointerReleased(PointerEventArgs e) { }
         public virtual void OnPointerMoved(PointerEventArgs e) { }
