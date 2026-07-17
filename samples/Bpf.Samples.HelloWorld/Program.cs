@@ -64,6 +64,36 @@ internal static class Program
             MainForm.treeView.AddRoot(root);
         }
 
+        // M13:给 Menu 填充菜单项
+        if (MainForm.menuBar != null)
+        {
+            var file = MainForm.menuBar.AddMenu("文件");
+            file.AddItem("新建").Click += (s, e) => System.Console.WriteLine("[Menu] 新建");
+            file.AddItem("打开").Click += (s, e) => System.Console.WriteLine("[Menu] 打开");
+            file.AddItem("保存").Click += (s, e) => System.Console.WriteLine("[Menu] 保存");
+            var edit = MainForm.menuBar.AddMenu("编辑");
+            edit.AddItem("撤销").Click += (s, e) => System.Console.WriteLine("[Menu] 撤销");
+            edit.AddItem("重做").Click += (s, e) => System.Console.WriteLine("[Menu] 重做");
+            var help = MainForm.menuBar.AddMenu("帮助");
+            help.AddItem("关于").Click += (s, e) => System.Console.WriteLine("[Menu] 关于");
+        }
+
+        // M13:给 DataGrid 填充数据
+        if (MainForm.dataGrid != null)
+        {
+            MainForm.dataGrid.AddColumn("姓名", 100);
+            MainForm.dataGrid.AddColumn("年龄", 60);
+            MainForm.dataGrid.AddColumn("城市", 0);
+            MainForm.dataGrid.SetRows(new[]
+            {
+                new[] { "张三", "25", "北京" },
+                new[] { "李四", "30", "上海" },
+                new[] { "王五", "28", "广州" },
+                new[] { "赵六", "35", "深圳" },
+                new[] { "钱七", "22", "杭州" },
+            });
+        }
+
         window.SetContent(form);
 
         app.Run();

@@ -47,6 +47,25 @@
   <!-- M12: TreeView 树形视图(代码填充) -->
   <TreeView x:Name="treeView" Height="100" />
 
+  <!-- M13: PasswordBox 密码框 -->
+  <StackPanel Orientation="Horizontal">
+    <Label Text="密码: " FontSize="13" />
+    <PasswordBox x:Name="passwordBox" ToolTip="输入密码(显示为圆点)" />
+  </StackPanel>
+
+  <!-- M13: ColorPicker 颜色选择器 -->
+  <StackPanel Orientation="Horizontal">
+    <Label Text="颜色: " FontSize="13" />
+    <ColorPicker x:Name="colorPicker" ToolTip="点击选择颜色" />
+  </StackPanel>
+
+  <!-- M13: Menu 菜单栏(代码填充) -->
+  <Menu x:Name="menuBar" />
+
+  <!-- M13: DataGrid 数据表格(代码填充) -->
+  <Label Text="DataGrid(点击行选中):" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+  <DataGrid x:Name="dataGrid" Height="120" />
+
   <!-- 旧内容(放在新控件之后) -->
   <Separator />
 

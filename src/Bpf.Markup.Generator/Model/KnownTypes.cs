@@ -38,6 +38,11 @@ namespace Bpf.Markup.Generator.Model
             { "NumericUpDown", "Bpf.Controls.NumericUpDown" },
             { "TabControl",    "Bpf.Controls.TabControl" },
             { "TreeView",      "Bpf.Controls.TreeView" },
+            // M13 新控件
+            { "PasswordBox",   "Bpf.Controls.PasswordBox" },
+            { "Menu",          "Bpf.Controls.Menu" },
+            { "ColorPicker",   "Bpf.Controls.ColorPicker" },
+            { "DataGrid",      "Bpf.Controls.DataGrid" },
             // Bpf.Media
             { "SolidColorBrush", "Bpf.Media.SolidColorBrush" },
             // M6 特殊元素(非控件,发射器按 LocalName 特殊处理;FullTypeName 仅占位)
